@@ -1,0 +1,31 @@
+import mongoose from "mongoose"
+
+const conversationSchema = new mongoose.Schema({
+    type: { 
+        type: String,
+        enum: ["direct", "group"],
+        default: "direct"
+    },
+    participents: [{
+        type: String
+    }],
+    lastMessage: {
+        text: {
+            type: String
+        },
+        senderId: {
+            type: String
+        },
+        createdId: {
+            type: Date
+        }
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+})
+
+const conversation = mongoose.models.conversation || mongoose.model("conversation" , conversationSchema);
+
+export default conversation;
