@@ -12,7 +12,7 @@ import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest 
 import { upsertConversation } from '@/redux/conversationSlice';
 import { motion } from "motion/react";
 
-function page() {
+function Page() {
 
     const mode = useAppSelector((state) => state.theme.mode);
     const dispatch = useAppDispatch();
@@ -25,7 +25,7 @@ function page() {
     console.log("all friends",friends);
     console.log("all requests",requests);
     const socketRef = useRef<null | WebSocket>(null)
-    const [loading , setLoading] = useState<boolean>(true)
+    // const [loading , setLoading] = useState<boolean>(true)
 
     useEffect(() =>{
         const socket = getSocket();
@@ -179,7 +179,8 @@ function page() {
 
                         return (
                             <>
-                            <div className="">
+                            <div className=""
+                            key={index}>
                                 {showDateDivider && (
                                    <div className="flex justify-start my-3">
                                      <span className="px-3 py-1 text-xs text-gray-500 bg-gray-200 rounded-full">
@@ -201,32 +202,36 @@ function page() {
                                  <div className="text-sm  px-2 py-1 text-white w-full break-words break-all whitespace-normal leading-snug">
                                    <span className='font-bold text-md'>{notify.otherUser?.name}</span>
                                     {
-                                    friends.map((fnd: Friend) => (
+                                    friends.map((fnd: Friend , index) => (
                                         fnd._id === notify?.otherUser?.uniqueId && (
-                                            <span className='ml-2'>u r frnds.</span>
+                                            <span className='ml-2'
+                                            key={index}>u r frnds.</span>
                                         )
                                     ))
                                     }
                                     {
-                                        requests.map((req) => (
+                                        requests.map((req , index) => (
                                             req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && req._id && (
-                                                <span className='ml-2'>requested frnd request to you.</span>
+                                                <span className='ml-2'
+                                                key={index}>requested frnd request to you.</span>
                                             )
                                         ))
                                     }
                                     {
-                                        requests.map((req) => (
+                                        requests.map((req , index) => (
                                             req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
-                                                <span className='ml-2'>you requested to be friends.</span>
+                                                <span className='ml-2'
+                                                key={index}>you requested to be friends.</span>
                                             )
                                         ))
                                     }
                                  </div>
                                    <div className="bg-blue-500 rounded-md">
                                  {
-                                    friends.map((fnd: Friend) => (
+                                    friends.map((fnd: Friend , index) => (
                                         fnd._id === notify?.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && (
                                             <div className="px-3 py-1.5 text-sm hover:cursor-pointer"
+                                            key={index}
                                             onClick={() => handleUnFrnd(fnd)}>
                                                 UnFrnd
                                             </div>
@@ -234,9 +239,10 @@ function page() {
                                         ))
                                  }
                                  {
-                                    friends.map((fnd: Friend) => (
+                                    friends.map((fnd: Friend , index) => (
                                         fnd._id === notify?.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && (
                                             <div className="px-3 py-1.5 text-sm hover:cursor-pointer"
+                                            key={index}
                                             // onClick={() => handleUnFrnd(fnd)}
                                             >
                                                 Friends
@@ -245,10 +251,11 @@ function page() {
                                         ))
                                  }
                                   {
-                                    requests.map((req) => (
+                                    requests.map((req , index) => (
                                         req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && (
                                             <button 
                                             className='px-3 hover:cursor-pointer py-1.5 text-sm hover:pointer'
+                                            key={index}
                                             onClick={() => handleAccept(notify)} 
                                             >
                                                 Accept
@@ -257,10 +264,11 @@ function page() {
                                     ))
                                   }
                                   {
-                                    requests.map((req) => (
+                                    requests.map((req , index) => (
                                         req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
                                             <button 
                                             className='px-3 hover:cursor-pointer py-1.5 text-sm hover:pointer'
+                                            key={index}
                                             // onClick={() => handleAccept(notify)} 
                                             >
                                                 Pending
@@ -300,4 +308,4 @@ function page() {
   )
 }
 
-export default page
+export default Page

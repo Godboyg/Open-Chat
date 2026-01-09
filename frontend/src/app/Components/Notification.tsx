@@ -16,25 +16,20 @@ type props = {
   accepted: (data: Friend) => void
 }
 
-function Notification({ isOn , onIs , notification , close , accepted }: props) {
+function Notification({ onIs , close , accepted }: props) {
 
   const controls = useAnimation();
-  const { data: session , status } = useSession();
+  const { data: session } = useSession();
 
   const [loading , setLoading] = useState<boolean>(true);
   const [click , isClick ] = useState<boolean>(false);
-  const dispatch = useAppDispatch();
+  // const dispatch = useAppDispatch();
   const notificationReceived = useAppSelector((state) => state.friends.requests);
   const friens = useAppSelector((state) => state.friends.friends);
   const pendingNotification = useAppSelector((state) => state.notifications.items);
   console.log("penfins",pendingNotification);
   const sfiub = useAppSelector((state) => state.conversations.allIds);
   console.log(sfiub);
-
-  useEffect(() => {
-    console.log("notification", notificationReceived);
-    console.log("notification", friens);
-  },[])
 
   useEffect(() => {
     try{
@@ -53,7 +48,7 @@ function Notification({ isOn , onIs , notification , close , accepted }: props) 
     } catch(error) {
       console.log("error",error);
     }
-  },[])
+  },[friens , session?.user.internalId])
 
   useEffect(() => {
     setTimeout(() => {
@@ -122,11 +117,11 @@ function Notification({ isOn , onIs , notification , close , accepted }: props) 
                   <div className="max-w-full">
                     {
                       pendingNotification.map((pending) => (
-                        <div className="flex items-center gap-2 max-w-full px-3 py-1 bg-black border-cyan-600 border">
+                        <div className="flex items-center gap-2 max-w-full px-3 py-1 bg-black shadow shadow-cyan-600">
                           <div className="text-lg font-semibold">
                             {pending.message}
                           </div>
-                          <div className="h-4 w-4 rounded-full bg-green-400"></div>
+                          <div className="h-3 w-3 rounded-full bg-green-400"></div>
                         </div>
                       ))
                     }
@@ -137,7 +132,8 @@ function Notification({ isOn , onIs , notification , close , accepted }: props) 
                     <div className="w-full flex flex-col gap-1">
                 {
                   notificationReceived.map((notify , index) => (
-                    <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center justify-between gap-2 w-full"
+                    key={index}>
                        <div className="flex items-center gap-3">
                          <div className="h-8 w-8 hover:cursor-pointer rounded-full overflow-hidden">
                           <Image 

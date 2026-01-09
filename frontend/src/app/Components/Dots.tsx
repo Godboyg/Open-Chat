@@ -5,7 +5,7 @@ type props = {
     value?: boolean
 }
 
-function Dots({ theme , value }: props) {
+function Dots({ value }: props) {
   return (
     <div className='flex flex-col gap-[3.5px]'>
         <span className={`transition-all duration-400 ease-in-out

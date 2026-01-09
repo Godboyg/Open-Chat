@@ -8,7 +8,7 @@ type props = {
 
 const RunningBorderBox = ({ clicked } : props) => {
 
-  const {data: session, status} = useSession();
+  const { status } = useSession();
 
   const [click , setClick] = useState(false)
 

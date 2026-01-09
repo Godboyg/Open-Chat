@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type lastM = {
-  text: String,
+  text: string,
   senderId: string,
   date: Date
 }

@@ -15,7 +15,7 @@ import { formatLastActive } from '@/lib/LastActive';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import toast from 'react-hot-toast';
 
-function page() {
+function Page() {
 
     const chatRef = useRef<HTMLDivElement | null>(null);
     const [msg , setMsg] = useState<string>("");
@@ -366,4 +366,4 @@ function page() {
   )
 }
 
-export default page
+export default Page

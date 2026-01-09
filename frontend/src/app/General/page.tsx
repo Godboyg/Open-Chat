@@ -8,7 +8,7 @@ import { getSocket } from '@/lib/socket';
 import { getCurrentTime } from './CurrentTime';
 import { useSession } from 'next-auth/react';
 // import dynamic from 'next/dynamic'
-import data from '@emoji-mart/data'
+// import data from '@emoji-mart/data'
 import Image from 'next/image';
 import 'remixicon/fonts/remixicon.css'
 import toast, { Toaster } from 'react-hot-toast';
@@ -53,32 +53,32 @@ type activeUsers = {
 }
 
 export type NotificationType = {
-    from?: String,
-    to?: String,
+    from?: string,
+    to?: string,
     notificationReceived?: {
-        createdAt?: String
-        from?: String
+        createdAt?: string
+        from?: string
         isRead?: false
-        message?: String
-        type?: String
-        userId?: String
-        _id?: String
+        message?: string
+        type?: string
+        userId?: string
+        _id?: string
     },
     found: {
-        image?: String
-        name?: String
-        fullName?: String
-        lastActive?: String
+        image?: string
+        name?: string
+        fullName?: string
+        lastActive?: string
     }
 }
 
-function page() {
+function Page() {
     const [open , setOpen] = useState(false);
     const [notify , setNotify] = useState<NotificationType[]>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [thought , setThought] = useState<string | null | undefined>("");
     const [screenSize , setScreenSize] = useState(true);
-    const [allUsers, setAllUsers] = useState<number>()
+    // const [allUsers, setAllUsers] = useState<number>()
     const [soc , setSoc] = useState<WebSocket>()
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const [loading , setLoading] = useState<boolean>(false)
@@ -108,12 +108,12 @@ function page() {
     const [editTo , setEditTo] = useState<message | null>(null);
 
     const [dclik , setDClick] = useState(false);
-    const [active , setActive] = useState(false);
+    // const [active , setActive] = useState(false);
     const [typing , setTyping] = useState<boolean>(false); 
     const socketRef = useRef<WebSocket | null>(null);
     const profileRef = useRef<HTMLDivElement | null>(null);
-    const [activeUsers , setActiveUsers] = useState<activeUsers[]>([])
-    const [allActiveUsers , setAllActiveUsers] = useState<string[]>([]);
+    // const [activeUsers , setActiveUsers] = useState<activeUsers[]>([])
+    // const [allActiveUsers , setAllActiveUsers] = useState<string[]>([]);
     const [disabled, setDisabled] = useState<boolean>(false);
     const [viewProfile , setViewProfile] = useState<boolean>(false)
     const [stage , setStage] = useState<"add" | "done" | "processing">("add");
@@ -159,7 +159,7 @@ function page() {
         currentUser();
 
         dispatch(setActiveConversation(null));
-    },[status])
+    },[status , session])
 
     useEffect(() => {
         const handleMouseDown = (e: Event) => {
@@ -281,7 +281,7 @@ function page() {
 
         socket.onopen = (event) => {
             console.log("socket is open now");
-            setActive(true);
+            // setActive(true);
         }
         
         socket.onmessage = (event) => {
@@ -312,12 +312,12 @@ function page() {
             }
             else if(data.type === "onlineUsers"){
                 console.log("onlineuser",data);
-                setAllUsers(data.size);
+                // setAllUsers(data.size);
                 localStorage.setItem("onlineUsers",data.size);
                 dispatch(setOnlineCount(data.size));
             }
             else if(data.type === "ONLINE_USERS"){
-                setAllActiveUsers(data.users);
+                // setAllActiveUsers(data.users);
                 dispatch(setUserOnline(data.users));
                 console.log("online users []",data.users);
             } else if(data.type === "ONLINE_USERS_AFTER"){
@@ -468,7 +468,7 @@ function page() {
         }
 
         socket.onclose = (event) => {
-            setActive(false);
+            // setActive(false);
             // setActiveUsers((prev) => 
             //     prev.map((prv) => 
             //         (prv.current.name === currentUser.name ? { ...prv , isActive: false } : prv)
@@ -491,7 +491,7 @@ function page() {
             console.log("frienshs",friends);
 
             if(res.data) {
-                const friendId = friends.forEach((f: any) => 
+                friends.forEach((f: any) => 
                     f.requester === session?.user.internalId
                     ? dispatch(addFriend({
                     _id: f.recipient,
@@ -502,7 +502,7 @@ function page() {
                     _id: f.requester,
                     status: f.status,
                     conversationId: f.conversationId
-                     }))
+                    }))
                 )
             }
 
@@ -511,13 +511,6 @@ function page() {
 
         store();
     },[status])
-
-    useEffect(() => {
-        // dispatch(resetConversations());
-        // dispatch(resetFriends());
-        // dispatch(resetNotifications());
-        // dispatch(resetMessages());
-    },[])
 
     useEffect(() => {
         try{
@@ -542,7 +535,7 @@ function page() {
         //       toast.error("pls refresh");
         //     }
         // }
-    },[status])
+    },[status , session])
 
     useEffect(() => {
         const cleaner = setInterval(() => {
@@ -550,13 +543,6 @@ function page() {
             setMessages((prev) => 
                 prev.filter(ms => ms.timestamp ? msg.time - ms.timestamp < 300000: "")
             )
-            if(socketRef.current) {
-                setActive(true);
-                socketRef.current.send(JSON.stringify({ isActive: true , current: session}));
-            } else {
-                setActive(false);
-                console.log("no socket",soc);
-            }
         },7000)
 
         return () => clearInterval(cleaner)
@@ -686,7 +672,7 @@ function page() {
         }
      }
 
-    const handleDoubleClick = (msg: message , i: any) => {
+    const handleDoubleClick = (msg: message) => {
         try{
             if (clickTimeout.current) clearTimeout(clickTimeout.current);
             if(msg.current?.name === currentUser.name) {
@@ -782,14 +768,16 @@ function page() {
                     pMsg.length > 0 ? (
                         <div className="relative">
                                  <i className="ri-chat-1-line text-shadow-md"></i>
-                                 <div className="absolute -top-2 flex items-center justify-center rounded-full h-4.5 w-4.5 -right-3">
+                                 <div className="absolute -top-2 flex
+                                  items-center justify-center rounded-full h-4.5 w-4.5 -right-3">
                                     <span className='lg:text-[1vw] sm:text-[1.5vw] text-[2.5vw] text-red-400'>{pMsg.length}</span>
                                  </div>
                         </div>
                     ) : (
-                        conversations.length > 0 && conversations.map((convo) => (
+                        conversations.length > 0 && conversations.map((convo , index) => (
                             convo.message && convo.message > 0 
-                             ? <div className="relative">
+                             ? <div className="relative"
+                             key={index}>
                                 <i className="ri-send-plane-line"></i>
                                 <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
                              </div>
@@ -804,9 +792,10 @@ function page() {
             }}>
                 <i className="ri-notification-line"></i>
                 {
-                    items.length > 0 && items.map((itm) => (
+                    items.length > 0 && items.map((itm , index) => (
                         itm.read !== true && (
-                            <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500">
+                            <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500"
+                            key={index}>
                               <div className="w-full h-full flex items-center justify-center text-sm">
                                {items.length}                        
                               </div>
@@ -970,7 +959,7 @@ function page() {
                               <div className="">
                                 <div className={`rounded-xl ml-3 break-words hover:cursor-pointer ${mode === "light" ? "text-black" : "text-gray-100"} text-base`}
                                  onClick={() => handleReplyClick(msg)}
-                                 onDoubleClick={() => handleDoubleClick(msg , i)}>
+                                 onDoubleClick={() => handleDoubleClick(msg)}>
                                    {msg.msg}
                                 </div>
                               </div>
@@ -1163,9 +1152,10 @@ function page() {
                                             friend.length > 0 ? (
                                                  <div className="w-full flex items-center justify-center">
                                                     {
-                                                    friend.map((fnd: Friend) => (
+                                                    friend.map((fnd: Friend , index) => (
                                                          fnd._id === currentProfile?.User_id &&
                                                          <div className="w-full flex text-white items-center p-2 hover:cursor-pointer justify-center rounded-md"
+                                                         key={index}
                                                          onClick={() => {
                                                             // alert("clicked")
                                                             if(fnd.conversationId) {
@@ -1234,10 +1224,11 @@ function page() {
                                         <div className="flex flex-col gap-2">
                                             {
                                                 conversations.length > 0 ? (
-                                                        conversations.map((convo) => {
+                                                        conversations.map((convo , index) => {
                                                             console.log("convoooo",convo);
                                                             return (
                                                               <div className="flex relative hover:cursor-pointer items-center justify-between px-2 py-0.5 rounded-md gap-2 w-full"
+                                                              key={index}
                                                               onClick={() => {
                                                                 dispatch(setActiveConversation(convo.convo._id))
                                                                 router.push(`/Chat/${convo.convo._id}`);
@@ -1351,7 +1342,7 @@ function page() {
   )
 }
 
-export default page
+export default Page
 
 function prev(value: message, index: number, array: message[]): message {
     throw new Error('Function not implemented.');

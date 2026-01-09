@@ -1,11 +1,6 @@
-import { useAppDispatch } from "@/redux/hooks"
-import { setOnlineCount } from "@/redux/themeSlice";
-
 let socket: WebSocket | null = null
 
 export function getSocket() {
-
-  // const dispatch = useAppDispatch();
 
   if (!socket || socket.readyState === WebSocket.CLOSED) {
     socket = new WebSocket('ws://localhost:9200')

@@ -17,7 +17,7 @@ interface User {
   photo: string | null | undefined;
 }
 
-function page() {
+function Page() {
 
   const router = useRouter();
 
@@ -109,15 +109,15 @@ function page() {
     }, 1000); 
   };
 
-  const handleOnClick = (value : boolean) => {
+  const handleOnClick = () => {
     router.push("/General")
-    // setTimeout(() => {
-    //   if(status && status === "authenticated"){
-    //     router.push("/General")
-    //   } else {
-    //    alert("pls login first")
-    //   }
-    // },1000)
+    setTimeout(() => {
+      if(status && status === "authenticated"){
+        router.push("/General")
+      } else {
+       alert("pls login first")
+      }
+    },1000)
   }
 
   return (
@@ -246,4 +246,4 @@ function page() {
   )
 }
 
-export default page
+export default Page

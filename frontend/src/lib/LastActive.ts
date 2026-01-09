@@ -4,7 +4,7 @@ export function formatLastActive(lastActiveISO: string) {
 
   const diffMs = now.getTime() - lastActive.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
+  // const diffHours = Math.floor(diffMins / 60);
 
   if (diffMins < 1) return "Just gone";
 
