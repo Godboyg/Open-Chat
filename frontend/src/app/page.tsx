@@ -1,6 +1,6 @@
 "use client"
-import React, { useEffect, useEffectEvent, useState } from 'react'
-import { signIn , signOut , useSession } from 'next-auth/react'
+import React, { useEffect, useState } from 'react'
+import { signIn , useSession } from 'next-auth/react'
 import Auth from './Components/Auth';
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import { toggleTheme } from '@/redux/themeSlice';
@@ -10,8 +10,6 @@ import Dots from './Components/Dots';
 import { useRouter } from 'next/navigation';
 import RunningBorderBox from './Components/RunningBorderBox';
 import axios from "axios"
-import { getSocket } from '@/lib/socket'
-import { getDeviceId } from '@/lib/deviceId';
 
 interface User {
   name: string | null | undefined;
@@ -190,7 +188,7 @@ function page() {
         </div>
         <div className=""></div>
       </div>
-     {/* <div className="">
+     <div className="">
        <motion.div 
         initial={{ opacity: 1 }}
         animate={{ y: "-100vh" , opacity: 1 }}
@@ -201,10 +199,10 @@ function page() {
           animate={{ opacity: 0.5 , scale: 0.5}}
           transition={{ delay: 1.0003 }}
           className='text-4xl md:text-6xl'>
-              HOME
+              {/* HOME */}
           </motion.div>
       </motion.div>
-     </div> */}
+     </div>
       {animate && (
         <motion.span
           initial={{ scale: 0, opacity: 1 }}

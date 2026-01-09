@@ -308,6 +308,15 @@ wss.on('connection', (ws: ExtWebSocket) => {
               from: data.from,
               status: "accepted"
             }))
+          } else {
+            await notification.create({
+              userId: data.from,
+              to: data.to,
+              type: "STATE_CHANGE",
+              message: "friend by the user",
+              conversationId: newConversation?._id || isConvo?._id,
+              isRead: false
+            })
           }
           if(to) {
             to.send(JSON.stringify({ 

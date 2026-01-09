@@ -1,5 +1,4 @@
 import axios from "axios";
-import { image } from "motion/react-client";
 import NextAuth, { DefaultSession , DefaultUser } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 

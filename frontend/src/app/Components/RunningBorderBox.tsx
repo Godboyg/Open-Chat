@@ -1,7 +1,6 @@
-import { h1, span } from "motion/react-client";
 import { useSession } from "next-auth/react";
-import { signIn } from "next-auth/react";
 import React, { useState } from "react";
+import { signIn } from "next-auth/react";
 
 type props = {
   clicked: (value: boolean) => void
@@ -18,18 +17,18 @@ const RunningBorderBox = ({ clicked } : props) => {
     onClick={() => {
       clicked(true)
         setClick(true)
-      // if(status === "authenticated"){
-      //   clicked(true)
-      //   setClick(true)
-      //   setTimeout(() => {
-      //     setClick(false)
-      //   },2000)
-      // } 
-      // else {
-      //   setClick(true)
-      //   clicked(true)
-      //   signIn("google")
-      // }
+      if(status === "authenticated"){
+        clicked(true)
+        setClick(true)
+        setTimeout(() => {
+          setClick(false)
+        },2000)
+      } 
+      else {
+        setClick(true)
+        clicked(true)
+        signIn("google")
+      }
     }}>
       {
         click ? (

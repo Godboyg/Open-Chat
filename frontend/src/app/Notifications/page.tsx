@@ -4,15 +4,13 @@ import { addNotification, markAllRead, NotificationN } from '@/redux/notificatio
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import React, { useEffect, useRef, useState } from 'react'
-import { findDimensionValueType, motion } from 'motion/react';
-import { button, data, image, span } from 'motion/react-client';
 import Image from 'next/image';
 import { getSocket } from '@/lib/socket';
-import { current } from '@reduxjs/toolkit';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
 import { upsertConversation } from '@/redux/conversationSlice';
+import { motion } from "motion/react";
 
 function page() {
 
@@ -211,14 +209,14 @@ function page() {
                                     }
                                     {
                                         requests.map((req) => (
-                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && (
+                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && req._id && (
                                                 <span className='ml-2'>requested frnd request to you.</span>
                                             )
                                         ))
                                     }
                                     {
                                         requests.map((req) => (
-                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && (
+                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
                                                 <span className='ml-2'>you requested to be friends.</span>
                                             )
                                         ))
@@ -260,7 +258,7 @@ function page() {
                                   }
                                   {
                                     requests.map((req) => (
-                                        req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && (
+                                        req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
                                             <button 
                                             className='px-3 hover:cursor-pointer py-1.5 text-sm hover:pointer'
                                             // onClick={() => handleAccept(notify)} 

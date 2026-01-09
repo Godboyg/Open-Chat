@@ -1,14 +1,13 @@
 "use client"
-import { RootState } from '@/redux/store';
-import React, { ChangeEvent, useEffect, useEffectEvent, useRef, useState } from 'react'
+import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import Dots from '../Components/Dots';
-import { getEasingForSegment, motion , AnimatePresence, DeprecatedLayoutGroupContext } from 'motion/react';
+import { motion , AnimatePresence } from 'motion/react';
 import { signOut } from 'next-auth/react';
 import { getSocket } from '@/lib/socket';
 import { getCurrentTime } from './CurrentTime';
 import { useSession } from 'next-auth/react';
-import dynamic from 'next/dynamic'
+// import dynamic from 'next/dynamic'
 import data from '@emoji-mart/data'
 import Image from 'next/image';
 import 'remixicon/fonts/remixicon.css'
@@ -17,14 +16,11 @@ import { useRouter } from 'next/navigation';
 import { setOnlineCount, setUserOnline } from '@/redux/themeSlice';
 // const Picker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
 import axios from 'axios';
-import { json } from 'stream/consumers';
 import Notification from '../Components/Notification';
-import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest, resetFriends } from '@/redux/friendSlice';
-import { Conversation, resetConversations, setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
-import { addNotification, markAllRead, NotificationN, resetNotifications } from '@/redux/notificationSlice';
-import { addMessage, resetMessages } from '@/redux/messageSlice';
-import { small, span } from 'motion/react-client';
-import { convertSegmentPathToStaticExportFilename } from 'next/dist/shared/lib/segment-cache/segment-value-encoding';
+import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
+import { setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
+import { addNotification } from '@/redux/notificationSlice';
+import { addMessage } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 
 type User = {
@@ -126,16 +122,16 @@ function page() {
     const { data: session , status} = useSession();
     const [currentProfile , setCurrentProfile] = useState<message | null >(null)
 
-    // useEffect(() => {
-    //     if(status === "authenticated"){
-    //         console.log("authenticated", session);
-    //     }
-    //     else if(status === "unauthenticated"){
-    //         router.push("/");
-    //     } else {
-    //         console.log("loading...");
-    //     }
-    // },[status])
+    useEffect(() => {
+        if(status === "authenticated"){
+            console.log("authenticated", session);
+        }
+        else if(status === "unauthenticated"){
+            router.push("/");
+        } else {
+            console.log("loading...");
+        }
+    },[status])
 
     useEffect(() => {
         const currentUser = async() => {
@@ -376,7 +372,22 @@ function page() {
                        }))   
                        socketRef.current?.send(JSON.stringify({ type: "done" , session }));
                     }
-
+                    if(d.message === "friend by the user") {
+                        dispatch(addFriend({
+                          _id: data.to,
+                          status: data.status,
+                          conversationId: data.conversationId
+                        }));
+                        // const upsert = {
+                        //   convo : {
+                        //   _id: data.conversationId,
+                        //   participents: [data.to , data.userId]
+                        //   }
+                        // }
+                        // dispatch(upsertConversation(upsert));
+                       dispatch(removeFriendRequest({ to: data.to , from: data.userId }))
+                       socketRef.current?.send(JSON.stringify({ type: "done" , session }));
+                    }
                     if(d.conversationId){
                     // if(d.message === "request-accepted" || d.message === "REQUEST_RECEIVED" || d.message === "REQUEST_SENT"){
                         const upsert = {

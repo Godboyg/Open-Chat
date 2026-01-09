@@ -1,21 +1,16 @@
 "use client"
-import React, { HTMLInputAutoCompleteAttribute, useEffect, useRef, useState } from 'react'
+import React, {  useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import 'remixicon/fonts/remixicon.css'
 import { getSocket } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
-import { addMessage, markMessagesRead, Message, setMessages } from '@/redux/messageSlice';
-import { ACTION_VERSION_INFO } from 'next/dist/next-devtools/dev-overlay/shared';
+import { addMessage, markMessagesRead, setMessages } from '@/redux/messageSlice';
 import { updateLastMessage } from '@/redux/conversationSlice';
-import { getCurrentTime } from '@/app/General/CurrentTime';
 import axios from 'axios';
 import Image from 'next/image';
 import Typing from './Typing';
-import { animate } from 'motion';
 import { motion } from 'motion/react';
-import { useParams } from 'next/navigation';
 import { setUserOnline } from '@/redux/themeSlice';
-import { small } from 'motion/react-client';
 import { formatLastActive } from '@/lib/LastActive';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import toast from 'react-hot-toast';
