@@ -5,14 +5,11 @@ export type ThemeMode = 'light' | 'dark';
 interface ThemeState {
   mode: ThemeMode;
   onlineCount: number;
-  users: (String | WebSocket)[]
+  users: (string | WebSocket)[];
 }
 
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
 const initialState: ThemeState = {
-  mode: (localStorage.getItem('theme') as ThemeMode) || (prefersDark ? 'dark' : 'light'),
-  // mode: (localStorage.getItem('theme') as ThemeMode) || (prefersDark ? 'dark' : 'light'),
+  mode: 'light', // safe default
   onlineCount: 0,
   users: []
 };
@@ -23,20 +20,26 @@ const themeSlice = createSlice({
   reducers: {
     toggleTheme: (state) => {
       state.mode = state.mode === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', state.mode);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('theme', state.mode);
+      }
     },
     setTheme: (state, action: PayloadAction<ThemeMode>) => {
       state.mode = action.payload;
-      localStorage.setItem('theme', state.mode);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('theme', state.mode);
+      }
     },
     setOnlineCount: (state, action: PayloadAction<number>) => {
       state.onlineCount = action.payload;
     },
-    setUserOnline: (state , action: PayloadAction<WebSocket[]>) => {
+    setUserOnline: (state, action: PayloadAction<WebSocket[]>) => {
       state.users = action.payload;
     }
   },
 });
 
-export const { toggleTheme, setTheme , setOnlineCount , setUserOnline } = themeSlice.actions;
+export const { toggleTheme, setTheme, setOnlineCount, setUserOnline } = themeSlice.actions;
 export default themeSlice.reducer;
