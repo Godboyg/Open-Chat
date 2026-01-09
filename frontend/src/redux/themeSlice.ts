@@ -9,7 +9,7 @@ interface ThemeState {
 }
 
 const initialState: ThemeState = {
-  mode: 'light', // safe default
+  mode: 'dark', // safe default
   onlineCount: 0,
   users: []
 };

@@ -124,7 +124,7 @@ function Page() {
     <div
       className={`relative h-screen  
          overflow-hidden
-        ${mode === 'light' ? 'bg-white text-black' : 'bg-black text-white'}`}
+        ${mode === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}
     >
       <div className="w-full max-md:flex z-9 fixed hidden backdrop-blur-xl items-center justify-between h-10">
         <div className="">
