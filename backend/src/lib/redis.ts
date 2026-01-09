@@ -1,6 +1,14 @@
 import { Redis } from "ioredis";
+import dotenv from "dotenv";
+dotenv.config();
 
-const redis = new Redis("rediss://default:AYZ6AAIncDI0OTYzMGI4MjBhY2U0ODQzOTA5OTE4YTQ4ZjlhNmI1MXAyMzQ0MjY@rested-marlin-34426.upstash.io:6379");
+const redisUrl = process.env.REDIS_URL;
+
+if (!redisUrl) {
+  throw new Error("REDIS_URL is not defined");
+}
+
+const redis = new Redis(redisUrl);
 
 redis.on("connect", () => console.log("✅ Redis connected"));
 redis.on("error", (err) => console.error("❌ Redis error", err));
