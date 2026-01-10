@@ -788,7 +788,7 @@ function Page() {
             </div>
             <div className="absolute lg:top-[50%] top-[3%] right-[3%] lg:left-7 hover:bg-gray-800 transition duration-300 ease-in h-9 w-9 flex items-center justify-center rounded-full hover:cursor-pointer text-white"
             onClick={() => {
-                router.push("/notifications")
+                router.push("/Notifications")
             }}>
                 <i className="ri-notification-line"></i>
                 {
@@ -1160,7 +1160,7 @@ function Page() {
                                                             // alert("clicked")
                                                             if(fnd.conversationId) {
                                                                 dispatch(setActiveConversation(fnd.conversationId))
-                                                                router.push(`/chat/${fnd.conversationId}`)
+                                                                router.push(`/Chat/${fnd.conversationId}`)
                                                                 setLoading(true)
                                                             }
                                                          }}>
@@ -1231,7 +1231,7 @@ function Page() {
                                                               key={index}
                                                               onClick={() => {
                                                                 dispatch(setActiveConversation(convo.convo._id))
-                                                                router.push(`/chat/${convo.convo._id}`);
+                                                                router.push(`/Chat/${convo.convo._id}`);
                                                               }}>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="h-9 relative w-9 rounded-full">
