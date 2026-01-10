@@ -6,7 +6,7 @@ import { connectDB } from './lib/db.js';
 
 connectDB();
 
-const server = createServer();
+const server = createServer(app.fetch);
 
 // server.on('upgrade', (request, socket, head) => {
 //   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
