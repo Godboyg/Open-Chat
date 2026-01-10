@@ -17,15 +17,17 @@ const server = http.createServer(async (req, res) => {
 
   const method = req.method ?? "GET"; // ✅ normalize
 
-  const request = new Request(url.toString(), {
+  const requestInit: NodeRequestInit = {
     method,
     headers: req.headers as HeadersInit,
     body:
       method === "GET" || method === "HEAD"
         ? null
-        : req as unknown as BodyInit,
-    duplex: "half"
-  });
+        : (req as unknown as BodyInit),
+    duplex: "half" 
+  };
+
+  const request = new Request(url.toString(), requestInit);
 
   const response = await app.fetch(request);
 
