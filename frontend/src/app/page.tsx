@@ -90,6 +90,7 @@ function Page() {
 
     if(status === "authenticated") {
       const socket = getSocket();
+      console.log(socket);
     }
     
   },[status])
