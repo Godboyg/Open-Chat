@@ -13,7 +13,7 @@ const server = http.createServer(async (req, res) => {
       body:
         req.method === "GET" || req.method === "HEAD"
           ? undefined
-          : req
+          : (req as any)
     }
   );
 
