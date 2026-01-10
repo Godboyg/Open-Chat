@@ -751,7 +751,7 @@ function Page() {
     }
  
   return (
-    <div className={`h-screen relative w-full ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
+    <div className={`h-screen relative w-full ${mode === "dark" ? "bg-white text-black" : "bg-black text-white"}`}>
         <Toaster />
         <div className="w-full flex items-center justify-center">
             {
