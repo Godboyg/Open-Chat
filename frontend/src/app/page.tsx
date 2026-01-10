@@ -128,7 +128,7 @@ function Page() {
       return;
     }
     if(socketRef.current.readyState === 1) {
-      socket.send(JSON.stringify({ type:"user-online", session }));
+      socketRef.current.send(JSON.stringify({ type:"user-online", session }));
     }
     router.push("/General")
     setTimeout(() => {
