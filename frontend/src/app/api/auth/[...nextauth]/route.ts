@@ -2,6 +2,7 @@ import axios from "axios";
 import NextAuth, { DefaultSession , DefaultUser } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
+
 declare module "next-auth" {
   interface User extends DefaultUser {
     internalId?: string;
@@ -31,7 +32,7 @@ const handler = NextAuth({
   callbacks: {
       async signIn({ user }) {
         try {
-        const res = await axios.post("/api/app/user/create",
+        const res = await axios.post(`${process.env.NEXTAUTH_URL}/user/create`,
           { 
             email: user.email,
             image: user.image
