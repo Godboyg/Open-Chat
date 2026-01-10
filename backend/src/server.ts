@@ -6,7 +6,7 @@ import { connectDB } from "./lib/db.js"
 connectDB()
 
 // 1️⃣ Create ONE HTTP server
-const server = createServer(app)
+const server = createServer(app.handle)
 
 // 2️⃣ Handle WebSocket upgrade ON THE SAME SERVER
 server.on("upgrade", (request, socket, head) => {
