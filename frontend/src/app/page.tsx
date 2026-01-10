@@ -127,17 +127,18 @@ function Page() {
       toast.error("pls try again!");
       return;
     }
-    if(socketRef.current.readyState === 1) {
-      socketRef.current.send(JSON.stringify({ type:"user-online", session }));
-    }
-    router.push("/General")
-    setTimeout(() => {
-      if(status && status === "authenticated"){
-        router.push("/General")
-      } else {
-       alert("pls login first")
+    else {
+      if(socketRef.current.readyState === 1) {
+        socketRef.current.send(JSON.stringify({ type:"user-online", session }));
       }
-    },1000)
+      router.push("/General")
+      setTimeout(() => {
+        if(status && status === "authenticated"){
+          router.push("/General")
+        } else {
+          alert("pls login first")
+        }
+      },1000)}
   }
 
   return (
