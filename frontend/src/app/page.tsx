@@ -110,10 +110,10 @@ function Page() {
   };
 
   const handleOnClick = () => {
-    router.push("/General")
+    router.push("/general")
     setTimeout(() => {
       if(status && status === "authenticated"){
-        router.push("/General")
+        router.push("/general")
       } else {
        alert("pls login first")
       }
