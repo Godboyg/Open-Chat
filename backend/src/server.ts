@@ -5,11 +5,14 @@ import { connectDB } from "./lib/db.js"
 
 connectDB()
 const server = http.createServer(async (req, res) => {
-  const url = `http://${req.headers.host}${req.url}`;
+  const url = new URL(
+    req.url ?? "/",
+    `http://${req.headers.host}`
+  );
 
   const method = req.method ?? "GET"; // ✅ normalize
 
-  const request = new Request(url, {
+  const request = new Request(url.toString(), {
     method,
     headers: req.headers as HeadersInit,
     body:
