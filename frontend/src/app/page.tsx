@@ -27,6 +27,7 @@ function Page() {
   const [animate, setAnimate] = useState<boolean>(false);
   const [screenSize , setScreenSize] = useState<boolean>(false);
   const [open , setOpen] = useState<boolean>(false);
+  const socketRef = useRef<WebSocket | null>(null);
   const [user, setUser] = useState<User>({
     name: "",
     email: "",
@@ -91,6 +92,7 @@ function Page() {
 
     if(status === "authenticated") {
       const socket = getSocket();
+      socketRef.current = socket;
       console.log(socket);
       if(socket.readyState === 1) {
         socket.send(JSON.stringify({ type:"user-online", session }));
@@ -122,7 +124,7 @@ function Page() {
 
   const handleOnClick = () => {
     if(!socket) toast.error("pls try again!");
-    if(socket.readyState === 1) {
+    if(socketRef.current.readyState === 1) {
       socket.send(JSON.stringify({ type:"user-online", session }));
     }
     router.push("/General")
