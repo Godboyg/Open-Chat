@@ -91,6 +91,9 @@ function Page() {
     if(status === "authenticated") {
       const socket = getSocket();
       console.log(socket);
+      if(socket.readyState === 1) {
+        socket.send(JSON.stringify({ type:"user-online", session }));
+      }
     }
     
   },[status])
