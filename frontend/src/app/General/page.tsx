@@ -477,7 +477,7 @@ function Page() {
         } 
 
         // return () => socket.close();
-    },[status , soc])
+    },[session , status , soc])
 
     useEffect(() => {
         const store = async() => {
