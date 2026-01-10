@@ -18,7 +18,8 @@ const server = http.createServer(async (req, res) => {
     body:
       method === "GET" || method === "HEAD"
         ? null
-        : req as unknown as BodyInit
+        : req as unknown as BodyInit,
+    duplex: "half"
   });
 
   const response = await app.fetch(request);
