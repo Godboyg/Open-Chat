@@ -14,7 +14,7 @@ const server = http.createServer(async (req, res) => {
     headers: req.headers as HeadersInit,
     body:
       method === "GET" || method === "HEAD"
-        ? undefined
+        ? null
         : req as unknown as BodyInit
   });
 
