@@ -5,6 +5,7 @@ import notification from '../models/notification.js';
 import conversation from '../models/conversation.js';
 import User from '../models/user.js';
 import Message from '../models/messages.js';
+import type { IncomingMessage } from "http";
 
 interface ExtWebSocket extends WebSocket {
   userId?: string;
@@ -31,7 +32,7 @@ const wsToUser = new Map();
 const CHAT_KEY = "global_chat";
 const CHAT_TTL = 300;
 
-wss.on('connection', (ws: ExtWebSocket) => {
+wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
   console.log('🟢 New WebSocket connection');
   clients.add(ws);
 
