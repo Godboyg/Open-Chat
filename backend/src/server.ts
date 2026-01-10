@@ -5,17 +5,18 @@ import { connectDB } from "./lib/db.js"
 
 connectDB()
 const server = http.createServer(async (req, res) => {
-  const request = new Request(
-    `http://${req.headers.host}${req.url}`,
-    {
-      method: req.method,
-      headers: req.headers as any,
-      body:
-        req.method === "GET" || req.method === "HEAD"
-          ? undefined
-          : (req as any)
-    }
-  );
+  const url = `http://${req.headers.host}${req.url}`;
+
+  const method = req.method ?? "GET"; // ✅ normalize
+
+  const request = new Request(url, {
+    method,
+    headers: req.headers as HeadersInit,
+    body:
+      method === "GET" || method === "HEAD"
+        ? undefined
+        : req as unknown as BodyInit
+  });
 
   const response = await app.fetch(request);
 
