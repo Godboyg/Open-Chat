@@ -228,7 +228,10 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
 
           const isConvo = await conversation.findOne({
             type: "direct",
-            participents: { $all: [data.to , data.from ]}
+            participents: { 
+              $all: [data.to , data.from ],
+              $size: 2
+            }
           })
 
           let newConversation;
