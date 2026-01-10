@@ -278,6 +278,9 @@ function Page() {
         if(socket.readyState ===  3 || socket.readyState === 2){
             toast.error("pls refresh the pege" , { duration: 2000 });
         }
+        if(socket.readyState === 1) {
+            socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
+        }
 
         socket.onopen = (event) => {
             console.log("socket is open now");
