@@ -3,7 +3,7 @@ let socket: WebSocket | null = null
 export function getSocket() {
 
   if (!socket || socket.readyState === WebSocket.CLOSED) {
-    socket = new WebSocket('ws://localhost:9200')
+    socket = new WebSocket('ws://open-chat-v9i4.onrender.com')
 
     socket.onopen = () => {
       console.log('✅ Connected to WebSocket server')
