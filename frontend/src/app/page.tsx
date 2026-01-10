@@ -5,6 +5,7 @@ import Auth from './Components/Auth';
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import { toggleTheme } from '@/redux/themeSlice';
 import { motion } from 'motion/react';
+import toast, { Toaster } from 'react-hot-toast';
 import 'remixicon/fonts/remixicon.css';
 import Dots from './Components/Dots';
 import { useRouter } from 'next/navigation';
@@ -120,6 +121,10 @@ function Page() {
   };
 
   const handleOnClick = () => {
+    if(!socket) toast.error("pls try again!");
+    if(socket.readyState === 1) {
+      socket.send(JSON.stringify({ type:"user-online", session }));
+    }
     router.push("/General")
     setTimeout(() => {
       if(status && status === "authenticated"){
@@ -136,6 +141,7 @@ function Page() {
          overflow-hidden
         ${mode ? "bg-black text-white" : "bg-white text-black"}`}
     >
+       <Toaster />
       <div className="w-full max-md:flex z-9 fixed hidden backdrop-blur-xl items-center justify-between h-10">
         <div className="">
           <h1 className='bg-gradient-to-b ml-5 from-green-500 to-blue-500 font-bold bg-clip-text text-transparent text-xl'>OpenChat</h1>
