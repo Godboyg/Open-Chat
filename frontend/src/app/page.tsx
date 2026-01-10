@@ -9,7 +9,8 @@ import 'remixicon/fonts/remixicon.css';
 import Dots from './Components/Dots';
 import { useRouter } from 'next/navigation';
 import RunningBorderBox from './Components/RunningBorderBox';
-import axios from "axios"
+import axios from "axios";
+import { getSocket } from '@/lib/socket';
 
 interface User {
   name: string | null | undefined;
@@ -86,6 +87,11 @@ function Page() {
     }
 
     fetchUser();
+
+    if(status === "authenticated") {
+      const socket = getSocket();
+    }
+    
   },[status])
   
   useEffect(() => {
