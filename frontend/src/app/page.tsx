@@ -123,7 +123,10 @@ function Page() {
   };
 
   const handleOnClick = () => {
-    if(!socketRef.current) toast.error("pls try again!");
+    if(!socketRef.current) {
+      toast.error("pls try again!");
+      return;
+    }
     if(socketRef.current.readyState === 1) {
       socket.send(JSON.stringify({ type:"user-online", session }));
     }
