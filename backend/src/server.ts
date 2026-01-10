@@ -1,20 +1,15 @@
-import { app } from './app.js'
+import { app } from "./app.js"
 import { wss } from "./ws/websocket.js"
-import { createServer } from 'http'
-import WebSocket, { WebSocketServer } from 'ws'
-import { connectDB } from './lib/db.js';
+import { createServer } from "http"
+import { connectDB } from "./lib/db.js"
 
-connectDB();
+connectDB()
 
-const server = createServer(app.fetch);
+// 1️⃣ Create ONE HTTP server
+const server = createServer(app.fetch)
 
-// server.on('upgrade', (request, socket, head) => {
-//   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
-//     wss.emit('connection', ws, request)
-//   })
-// })
-
-app.server?.on("upgrade", (request, socket, head) => {
+// 2️⃣ Handle WebSocket upgrade ON THE SAME SERVER
+server.on("upgrade", (request, socket, head) => {
   const { pathname } = new URL(
     request.url!,
     `http://${request.headers.host}`
@@ -29,8 +24,9 @@ app.server?.on("upgrade", (request, socket, head) => {
   }
 })
 
-app.listen({ server, port: 9100 })
+// 3️⃣ Start server (ONE PORT ONLY)
+const PORT = process.env.PORT || 9100
 
-server.listen(9200, () => {
-  console.log('🚀 Elysia + WebSocket server running at http://localhost:9000')
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`)
 })
