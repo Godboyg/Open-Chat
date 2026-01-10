@@ -32,7 +32,7 @@ const handler = NextAuth({
   callbacks: {
       async signIn({ user }) {
         try {
-        const res = await axios.post(`${process.env.NEXTAUTH_URL}/user/create`,
+        const res = await axios.post(`${process.env.BACKEND_URL}/user/create`,
           { 
             email: user.email,
             image: user.image
