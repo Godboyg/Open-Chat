@@ -4,6 +4,11 @@ import http from "http"
 import { connectDB } from "./lib/db.js"
 
 connectDB()
+
+type NodeRequestInit = RequestInit & {
+  duplex?: "half";
+};
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(
     req.url ?? "/",
