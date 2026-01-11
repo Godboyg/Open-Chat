@@ -485,7 +485,7 @@ function Page() {
            socketRef.current?.close();
            socketRef.current = null;
         }
-    },[])
+    },[status])
 
     useEffect(() => {
         const store = async() => {
