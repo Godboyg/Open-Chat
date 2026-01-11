@@ -162,7 +162,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
            } else {
              console.log("Friend request already exists");
            }
-           let senderNotification = await notification.updateOne(
+           let senderNotification = await notification.findOneAndUpdate(
                {
                  userId: data.from,
                  to: data.to,
@@ -180,7 +180,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                { upsert: true }
                );
 
-          let notificationReceived = await notification.updateOne(
+          let notificationReceived = await notification.findOneAndUpdate(
               {
                 userId: data.to,
                 from: data.from,
