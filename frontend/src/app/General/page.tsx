@@ -261,20 +261,19 @@ function Page() {
         document.addEventListener("mousedown",handleDown);
     },[])
 
-    let socket: WebSocket;
-
     useEffect(() => {
         if(status === "authenticated") {
-         socket = getSocket();
+         const socket = getSocket();
          socketRef.current = socket;
          console.log(socket);
-        }
-        if(socket.readyState === 1) {
-          socket.send(JSON.stringify({ type:"user-online", session }));
+         if(socket.readyState === 1) {
+           socket.send(JSON.stringify({ type:"user-online", session }));
+         }
         }
     },[status])
 
     useEffect(() => {
+        const socket = getSocket();
         console.log("sokket",socket);
         if(!socket) return;
         setSoc(socket);
