@@ -284,6 +284,7 @@ function Page() {
 
         socket.onopen = (event) => {
             console.log("socket is open now");
+            socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
             // setActive(true);
         }
         
