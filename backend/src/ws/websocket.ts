@@ -148,6 +148,9 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           console.log(data.to , data.from);
           const receiver = wsToUser.get(data.to);
           const senderId = wsToUser.get(data.from);
+
+          const [userA, userB] = [data.from, data.to].sort();
+          
           const result = await friend.updateOne(
              { requester: userA, recipient: userB },
              { $setOnInsert: { requester: userA, recipient: userB } },
