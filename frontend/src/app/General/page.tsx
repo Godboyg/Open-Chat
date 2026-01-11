@@ -158,8 +158,17 @@ function Page() {
 
         currentUser();
 
+        if(status === "authenticated") {
+           const socket = getSocket();
+           socketRef.current = socket;
+           console.log(socket);
+           if(socket.readyState === 1) {
+             socket.send(JSON.stringify({ type:"user-online", session }));
+           }
+        }
+
         dispatch(setActiveConversation(null));
-    },[status , session])
+    },[status])
 
     useEffect(() => {
         const handleMouseDown = (e: Event) => {
@@ -260,17 +269,6 @@ function Page() {
 
         document.addEventListener("mousedown",handleDown);
     },[])
-
-    useEffect(() => {
-        if(status === "authenticated") {
-         const socket = getSocket();
-         socketRef.current = socket;
-         console.log(socket);
-         if(socket.readyState === 1) {
-           socket.send(JSON.stringify({ type:"user-online", session }));
-         }
-        }
-    },[status])
 
     useEffect(() => {
         const socket = getSocket();
