@@ -38,7 +38,17 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
 
   clients.forEach((cl) => {
     console.log("sended");
-    cl.send(JSON.stringify({ type:"onlineUsers", text: "socket connected" , size: `${clients.size}`}));
+    const onlineUsers = await redis.smembers("online_users");
+
+    for(const user of onlineUsers) {
+        const socket = wsToUser.get(user);
+
+        if(!socket){
+            await redis.srem("online_users", user);
+        }
+    }
+    const onlineUser = await redis.smembers("online_users");
+    cl.send(JSON.stringify({ type:"onlineUsers", text: "socket connected" , size: `${clients.size}` , users: onlineUser }));
   })
 
   ws.on('message', (msg: RawData) => {
