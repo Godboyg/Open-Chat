@@ -481,10 +481,10 @@ function Page() {
             // )
         } 
 
-        return () => {
-           socketRef.current?.close();
-           socketRef.current = null;
-        }
+        // return () => {
+        //    socketRef.current?.close();
+        //    socketRef.current = null;
+        // }
     },[status])
 
     useEffect(() => {
@@ -529,7 +529,7 @@ function Page() {
         } else if(socketRef.current?.readyState === 2 || socketRef.current?.readyState === 3) {
             toast.error("pls refresh")
         }
-    },[status , session])
+    },[status])
 
     useEffect(() => {
         const cleaner = setInterval(() => {
