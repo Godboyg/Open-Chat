@@ -23,6 +23,8 @@ import { addNotification } from '@/redux/notificationSlice';
 import { addMessage } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 
+var socket = getSocket();
+
 type User = {
     name: string | null | undefined,
     image: string | null | undefined
@@ -267,10 +269,7 @@ function Page() {
         }
     },[status])
 
-    var socket;
-
     useEffect(() => {
-        socket = getSocket();
         console.log("sokket",socket);
         if(!socket) return;
         setSoc(socket);
