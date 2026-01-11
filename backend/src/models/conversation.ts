@@ -34,13 +34,6 @@ conversationSchema.index(
   }
 );
 
-conversationSchema.pre("save", function (next) {
-  if (this.type === "direct") {
-    this.participents.sort();
-  }
-  next();
-});
-
 const conversation = mongoose.models.conversation || mongoose.model("conversation" , conversationSchema);
 
 export default conversation;
