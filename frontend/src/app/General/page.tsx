@@ -261,7 +261,7 @@ function Page() {
         document.addEventListener("mousedown",handleDown);
     },[])
 
-    var socket: any;
+    let socket: WebSocket;
 
     useEffect(() => {
         if(status === "authenticated") {
