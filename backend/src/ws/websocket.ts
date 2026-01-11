@@ -86,7 +86,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           const parsedMessages = messages.map(m => JSON.parse(m));
           console.log(parsedMessages);
 
-          const socket = wsToUser.get(data?.session?.user.internalId);
+          const socket = wsToUser.get(data.session?.user.internalId);
           if(socket) {
             console.log("sended");
             socket.send(JSON.stringify({ type:"chat_history", parsedMessages}));
@@ -117,26 +117,33 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             message: pendingMsg
           }))
 
-          await redis.sadd("online_users", data.session?.user?.internalId ?? "");
+          const userId = data.session?.user?.internalId;
+          if (userId) {
+            await redis.sadd("online_users", userId);
+          }
 
           const onlineUsers = await redis.smembers("online_users");
 
-          for(const user of onlineUsers) {
-            const socket = wsToUser.get(user);
+          const staleUsers: string[] = [];
 
-            if(!socket){
-                await redis.srem("online_users", user);
+          for(const user of onlineUsers) {
+            if(!wsToUser.has(user)) {
+              staleUsers.push(user)
             }
           }
 
-          const onlineUser = await redis.smembers("online_users");
+          if(staleUsers.length > 0) {
+            await redis.srem("online_users", ...staleUsers);
+          }
 
-          console.log("kinline",onlineUsers)
-          const payload = JSON.stringify({
+          const cleanedOnlineUsers = staleUsers.length > 0
+             ? await redis.smembers("online_users")
+             : onlineUsers;
+
+          cl.send(JSON.stringify({
             type: "ONLINE_USERS",
-            users: onlineUser
-          })
-          cl.send(payload);
+            users: cleanedOnlineUsers
+          }));
         } else if(data.type === "friend-request") {
           console.log(data.to , data.from);
           const receiver = wsToUser.get(data.to);
