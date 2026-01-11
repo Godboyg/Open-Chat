@@ -162,49 +162,42 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
            } else {
              console.log("Friend request already exists");
            }
-           const isNotThere = await notification.findOne({
-            $or:[ 
-              {
-                userId: data.to,
-              from: data.from,
-              } , {
-                userId: data.from,
-                from: data.to
-              }
-            ]
-           })
-           const sender = await notification.findOne({
-            $or:[ 
-              {
-                userId: data.to,
-              to: data.from,
-              } , {
-                userId: data.from,
-                to: data.to
-              }
-            ]
-           })
-           let notificationReceived;
-           let senderNotification;
-           if(!isNotThere){
-            notificationReceived = await notification.create({
-              userId: data.to,
-              from: data.from,
-              type: "FRIEND_REQUEST",
-              message: "REQUEST_RECEIVED",
-              isRead: false
-            })
-           }
+           let senderNotification = await notification.updateOne(
+               {
+                 userId: data.from,
+                 to: data.to,
+                 type: "FRIEND_REQUEST"
+               },
+               {
+                $setOnInsert: {
+                  userId: data.from,
+                  to: data.to,
+                  type: "FRIEND_REQUEST",
+                  message: "REQUEST_SENT",
+                  isRead: false
+               }
+               },
+               { upsert: true }
+               );
 
-           if(!sender) {
-            senderNotification = await notification.create({
-              userId: data.from,
-              to: data.to,
-              type: "FRIEND_REQUEST",
-              message: "REQUEST_SENT",
-              isRead: false
-            })
-           }
+          let notificationReceived = await notification.updateOne(
+              {
+                userId: data.to,
+                from: data.from,
+                type: "FRIEND_REQUEST"
+              },
+              {
+                $setOnInsert: {
+                  userId: data.to,
+                  from: data.from,
+                  type: "FRIEND_REQUEST",
+                  message: "REQUEST_RECEIVED",
+                 isRead: false
+                }
+                 },
+                { upsert: true }
+             );
+
           if (receiver) {
             const found = await User.findOne({ uniqueUserId: data.from })
             console.log("found",found);
@@ -230,21 +223,24 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           const from = wsToUser.get(data.from);
           const to = wsToUser.get(data.to);
 
-          const isConvo = await conversation.findOne({
-            type: "direct",
-            participents: { 
-              $all: [data.to , data.from ],
-              $size: 2
-            }
-          })
+          const participants = [data.from, data.to].sort();
 
           let newConversation;
 
-          if(!isConvo){
+          try {
             newConversation = await conversation.create({
               type: "direct",
-              participents: [data.from , data.to]
-            })
+              participents: participants
+            });
+          } catch (err) {
+            if (err.code === 11000) {
+               newConversation = await conversation.findOne({
+                 type: "direct",
+                 participents: participants
+               });
+            } else {
+               throw err;
+            }
           }
 
           const newFriend = await friend.findOneAndUpdate(
