@@ -261,7 +261,7 @@ function Page() {
         document.addEventListener("mousedown",handleDown);
     },[])
 
-    var socket;
+    var socket: any;
 
     useEffect(() => {
         if(status === "authenticated") {
@@ -273,7 +273,6 @@ function Page() {
           socket.send(JSON.stringify({ type:"user-online", session }));
         }
     },[status])
-    
 
     useEffect(() => {
         console.log("sokket",socket);
