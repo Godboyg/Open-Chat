@@ -274,7 +274,9 @@ function Page() {
         console.log("sokket",socket);
         if(!socket) return;
         setSoc(socket);
-        socketRef.current = socket;
+        if (!socketRef.current) {
+          socketRef.current = getSocket();
+        }
         if(socket.readyState ===  3 || socket.readyState === 2){
             toast.error("pls refresh the pege" , { duration: 2000 });
         }
@@ -479,8 +481,11 @@ function Page() {
             // )
         } 
 
-        // return () => socket.close();
-    },[session , status , soc])
+        return () => {
+           socketRef.current?.close();
+           socketRef.current = null;
+        }
+    },[])
 
     useEffect(() => {
         const store = async() => {
