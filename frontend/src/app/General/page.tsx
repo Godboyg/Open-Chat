@@ -161,14 +161,14 @@ function Page() {
         if(status === "authenticated") {
            const socket = getSocket();
            socketRef.current = socket;
-           console.log(socket);
+           console.log("socket in",socket);
            if(socket.readyState === 1) {
              socket.send(JSON.stringify({ type:"user-online", session }));
            }
         }
 
         dispatch(setActiveConversation(null));
-    },[status])
+    },[session, status])
 
     useEffect(() => {
         const handleMouseDown = (e: Event) => {
