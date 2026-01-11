@@ -233,7 +233,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               participents: participants
             });
           } catch (err) {
-            if (err.code === 11000) {
+            if (err) {
                newConversation = await conversation.findOne({
                  type: "direct",
                  participents: participants
