@@ -23,8 +23,6 @@ import { addNotification } from '@/redux/notificationSlice';
 import { addMessage } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 
-var socket = getSocket();
-
 type User = {
     name: string | null | undefined,
     image: string | null | undefined
@@ -263,11 +261,19 @@ function Page() {
         document.addEventListener("mousedown",handleDown);
     },[])
 
+    var socket;
+
     useEffect(() => {
-        if(socketRef.current?.readyState === 3 || socketRef.current?.readyState === 2){
-            toast.error("pls refresh the pege" , { duration: 2000 });
+        if(status === "authenticated") {
+         socket = getSocket();
+         socketRef.current = socket;
+         console.log(socket);
+        }
+        if(socket.readyState === 1) {
+          socket.send(JSON.stringify({ type:"user-online", session }));
         }
     },[status])
+    
 
     useEffect(() => {
         console.log("sokket",socket);
