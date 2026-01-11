@@ -36,7 +36,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
   console.log('🟢 New WebSocket connection');
   clients.add(ws);
 
-  clients.forEach((cl) => {
+  clients.forEach(async(cl) => {
     console.log("sended");
     const onlineUsers = await redis.smembers("online_users");
 
