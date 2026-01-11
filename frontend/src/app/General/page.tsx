@@ -286,13 +286,13 @@ function Page() {
             socket.send(JSON.stringify({ type:"user-online", session }));
         }
 
-        socket.onopen = (event) => {
+        socket.onopen = (event: any) => {
             console.log("socket is open now");
             socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
             // setActive(true);
         }
         
-        socket.onmessage = (event) => {
+        socket.onmessage = (event: any) => {
             const data = JSON.parse(event.data);
             console.log("data on message",data);
             if(data.isActive){
@@ -475,7 +475,7 @@ function Page() {
             }
         }
 
-        socket.onclose = (event) => {
+        socket.onclose = (event: any) => {
             // setActive(false);
             // setActiveUsers((prev) => 
             //     prev.map((prv) => 
