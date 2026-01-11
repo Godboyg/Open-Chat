@@ -145,7 +145,7 @@ function Page() {
 
             const user = res.data.current;
 
-            if(user && !user.fullName && !user.phoneNumber){
+            if(user && !user.fullName && !user.phoneNumber && !session){
                 setIsTrue(true);
                 setFormData({
                  fullName: "",
