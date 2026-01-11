@@ -265,7 +265,7 @@ function Page() {
         if(socketRef.current?.readyState === 3 || socketRef.current?.readyState === 2){
             toast.error("pls refresh the pege" , { duration: 2000 });
         }
-    },[soc , status])
+    },[status])
 
     var socket;
 
@@ -274,9 +274,7 @@ function Page() {
         console.log("sokket",socket);
         if(!socket) return;
         setSoc(socket);
-        if (!socketRef.current) {
-          socketRef.current = getSocket();
-        }
+        socketRef.current = getSocket();
         if(socket.readyState ===  3 || socket.readyState === 2){
             toast.error("pls refresh the pege" , { duration: 2000 });
         }
