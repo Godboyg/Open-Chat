@@ -258,7 +258,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             {
               $set: {
                 status: "accepted",
-                conversationId: newConversation?._id || isConvo?._id
+                conversationId: newConversation?._id
               }
             }, 
             // {
@@ -285,7 +285,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             ]
           },{
              $set: {
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
              }
           })
           const getNotifySnder = await notification.findOneAndUpdate({
@@ -300,14 +300,14 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             ]
           },{
              $set: {
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
              }
           })
 
           if(from) {
             from.send(JSON.stringify({ 
               type: "request-accepted" , newFriend , newConversation,
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               _id: data.to,
               from: data.from,
               status: "accepted"
@@ -318,14 +318,14 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               to: data.to,
               type: "STATE_CHANGE",
               message: "friend by the user",
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               isRead: false
             })
           }
           if(to) {
             to.send(JSON.stringify({ 
               type: "request-accepted" , newFriend , newConversation ,
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               _id: data.from,
               from: data.to,
               status: "accepted"
