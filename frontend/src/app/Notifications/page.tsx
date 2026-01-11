@@ -31,6 +31,11 @@ function Page() {
         const socket = getSocket();
         socketRef.current = socket;
 
+        socket.onopen = (event) => {
+            console.log("socket connected");
+            socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
+        }
+
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if(data.type === "user-unfrnd"){
