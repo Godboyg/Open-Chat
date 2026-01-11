@@ -148,22 +148,16 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           console.log(data.to , data.from);
           const receiver = wsToUser.get(data.to);
           const senderId = wsToUser.get(data.from);
-          const isThere = await friend.findOne({
-            $or: [
-              {
-              requester: data.from,recipient: data.to
-            },
-            {
-              requester: data.to,
-             recipient: data.from
-            }
-          ]
-          }) 
-           if(!isThere){
-            await friend.create({
-             requester: data.from,
-             recipient: data.to
-            })
+          const result = await friend.updateOne(
+             { requester: userA, recipient: userB },
+             { $setOnInsert: { requester: userA, recipient: userB } },
+             { upsert: true }
+           );
+
+           if (result.upsertedCount > 0) {
+             console.log("Friend request created");
+           } else {
+             console.log("Friend request already exists");
            }
            const isNotThere = await notification.findOne({
             $or:[ 
