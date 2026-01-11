@@ -26,6 +26,21 @@ const conversationSchema = new mongoose.Schema({
     }
 })
 
+conversationSchema.index(
+  { type: 1, participents: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { type: "direct" }
+  }
+);
+
+conversationSchema.pre("save", function (next) {
+  if (this.type === "direct") {
+    this.participents.sort();
+  }
+  next();
+});
+
 const conversation = mongoose.models.conversation || mongoose.model("conversation" , conversationSchema);
 
 export default conversation;
