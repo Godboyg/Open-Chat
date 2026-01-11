@@ -25,3 +25,5 @@ export function getSocket() {
 
   return socket;
 }
+
+export const getScoket = () => socket;
