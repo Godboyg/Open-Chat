@@ -521,28 +521,14 @@ function Page() {
     },[status])
 
     useEffect(() => {
-        try{
-            if(socketRef?.current?.readyState === 1) {
-                toast.success("socket connected");
-                socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
-                return;
-            } else if(socketRef.current?.readyState === 0) {
-                toast.error("connecting")
-                return;
-            } else if(socketRef.current?.readyState === 2 || socketRef.current?.readyState === 3) {
-                toast.error("pls refresh")
-                return;
-            }
-        } catch(error) {
-            console.log("error",error);
-        } 
-        // finally {
-        //     if(socketRef?.current?.readyState === 1) {
-        //         console.log("connected!")
-        //     } else {
-        //       toast.error("pls refresh");
-        //     }
-        // }
+        if(socketRef?.current?.readyState === 1) {
+            toast.success("socket connected");
+            socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
+        } else if(socketRef.current?.readyState === 0) {
+            toast.error("connecting")
+        } else if(socketRef.current?.readyState === 2 || socketRef.current?.readyState === 3) {
+            toast.error("pls refresh")
+        }
     },[status , session])
 
     useEffect(() => {
