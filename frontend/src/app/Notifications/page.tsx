@@ -127,14 +127,16 @@ function Page() {
                         dispatch(addNotification(formattedNotification));
                     }
 
-                    const pendingReq = result.length > 0 ? result.map((n: any) => ({
-                        _id: n.notify._id,
-                        to: n.notify.to,
-                        status: "pending"
-                    })) : [];
-
-                    if(pendingReq.length > 0) {
-                        dispatch(addFriendRequest(pendingReq));
+                    if (result.length > 0) {
+                       result.forEach((n: any) => {
+                         dispatch(
+                          addFriendRequest({
+                            _id: n.notify._id,
+                            to: n.notify.to,
+                            status: "pending",
+                          })
+                         );
+                       });
                     }
                 }
             } catch(err) {
