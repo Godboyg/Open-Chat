@@ -353,8 +353,8 @@ function Page() {
                 // },14000)
             } else if (data.type === "PENDING_NOTIFICATIONS") {
                 console.log("PENDING_NOTIFICATIONS",data.data);
-                const formattedNotification = data.data.length > 0 ? data.data.map((n: { from: string; type: string; message: string; to: string; isRead: boolean; }) => ({
-                    _id: data.userId,
+                const formattedNotification = data.data.length > 0 ? data.data.map((n: { from: string; type: string; message: string; to: string; isRead: boolean; userId: string; }) => ({
+                    _id: n.userId,
                     to: n.from || n.to,
                     type: n.type,
                     message: n.message,
