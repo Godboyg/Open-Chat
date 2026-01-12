@@ -89,7 +89,7 @@ function Page() {
     const clickTimeout = useRef<NodeJS.Timeout | null>(null);
     const [isTrue , setIsTrue] = useState(false);
     const [pMsg , setPMsg] = useState<any[]>([]);
-    const [convo , setConvo] = useState<string>("")
+    const [conve , setConvo] = useState<string>("");
     const [messages , setMessages] = useState<message[]>([]
     //     () => {
     //   const saved = localStorage.getItem("msg");
@@ -1255,7 +1255,7 @@ function Page() {
                                                                         </div>
                                                                         <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
-                                                                            convo === convo.convo._id && typing ? (
+                                                                            conve === convo.convo._id && typing ? (
                                                                                 <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
