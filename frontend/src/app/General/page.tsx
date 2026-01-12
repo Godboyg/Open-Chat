@@ -89,6 +89,7 @@ function Page() {
     const clickTimeout = useRef<NodeJS.Timeout | null>(null);
     const [isTrue , setIsTrue] = useState(false);
     const [pMsg , setPMsg] = useState<any[]>([]);
+    const [convo , setConvo] = useState<string>("")
     const [messages , setMessages] = useState<message[]>([]
     //     () => {
     //   const saved = localStorage.getItem("msg");
@@ -1252,9 +1253,9 @@ function Page() {
                                                                         <div className="mb-3.5">
                                                                             {convo?.otherUser?.fullName}                                                                       
                                                                         </div>
-                                                                        <div className="lg:text-[1vw] md:text-[2vw] sm:text-[2.4vw] text-[3vw]">
+                                                                        <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
-                                                                            typing ? (
+                                                                            convo === convo.convo._id && typing ? (
                                                                                 <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
@@ -1262,9 +1263,9 @@ function Page() {
                                                                                 ? <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
                                                                                 : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
-                                                                                        <small>Sent</small>
+                                                                                        <small className="text=sm">Sent</small>
                                                                                     ) : (
-                                                                                        <small>{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                        <small className="text-sm">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
                                                                                     )
                                                                                 }</small>
                                                                             ) : (
