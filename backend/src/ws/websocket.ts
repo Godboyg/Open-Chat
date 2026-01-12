@@ -575,7 +575,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               const socket = wsToUser.get(part);
 
               if(socket) {
-                socket.send(JSON.stringify({ type: "Typing" }))
+                socket.send(JSON.stringify({ type: "Typing" , convo: data.activeId }))
               }
             }
           } catch(error) {
