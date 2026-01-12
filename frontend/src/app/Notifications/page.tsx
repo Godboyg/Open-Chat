@@ -126,6 +126,16 @@ function Page() {
                         console.log("added")
                         dispatch(addNotification(formattedNotification));
                     }
+
+                    const pendingReq = result.length > 0 ? result.map((n: any) => ({
+                        _id: n.notify._id,
+                        to: n.notify.to,
+                        status: "pending"
+                    })) : [];
+
+                    if(pendingReq.length > 0) {
+                        dispatch(addFriendRequest(pendingReq));
+                    }
                 }
             } catch(err) {
                 console.log("error",err);
