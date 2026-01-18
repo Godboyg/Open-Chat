@@ -7,7 +7,7 @@ let listeners: ((data: any) => void)[] = []
 export function getSocket() {
 
   if (!socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
-    socket = new WebSocket('http://localhost:9200')
+    socket = new WebSocket('wss://open-chat-v9i4.onrender.com/ws')
 
     socket.onopen = async() => {      
       try{
