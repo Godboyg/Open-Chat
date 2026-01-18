@@ -6,7 +6,7 @@ import { notificationRoute } from './routes/notification.route.js'
 import { messageRouter } from './routes/messages.route.js'
 import { conversationRouter } from './routes/conversation.route.js'
 
-export const app = new Elysia({ adapter: node() })
+export const app = new Elysia()
     .use(cors({ origin: "http://localhost:3000" }))
     .use(userRoute)
     .use(notificationRoute)
