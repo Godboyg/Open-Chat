@@ -1,13 +1,25 @@
-self.addEventListener("push", (event) => {
-  if (!event.data) return;
 
-  const data = event.data.json();
+declare const self: ServiceWorkerGlobalScope;
 
-  const title = data.title || "New Message";
-  const options = {
-    body: data.body,
+interface PushPayload {
+  title?: string;
+  body?: string;
+  url?: string;
+}
+
+self.addEventListener("push", (event: PushEvent) => {
+  const data: PushPayload = event.data
+    ? (event.data.json() as PushPayload)
+    : {};
+
+  const title: string = data.title ?? "New Message";
+
+  const options: NotificationOptions = {
+    body: data.body ?? "You received a new message",
+    icon: "/next.svg",
+    badge: "/next.svg",
     data: {
-      url: data.url || "/",
+      url: data.url ?? "/",
     },
   };
 
@@ -16,22 +28,26 @@ self.addEventListener("push", (event) => {
   );
 });
 
-self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
 
-  const url = event.notification.data?.url || "/";
+  const url: string =
+    (event.notification.data as { url?: string })?.url ?? "/";
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true })
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if (client.url === url && "focus" in client) {
-            return client.focus();
+          if (
+            client.url.includes(url) &&
+            "focus" in client
+          ) {
+            return (client as WindowClient).focus();
           }
         }
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
+
+        return self.clients.openWindow(url);
       })
   );
 });
