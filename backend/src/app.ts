@@ -6,7 +6,7 @@ import { notificationRoute } from './routes/notification.route.js'
 import { messageRouter } from './routes/messages.route.js'
 import { conversationRouter } from './routes/conversation.route.js'
 
-export const app = new Elysia()
+export const app = new Elysia({ adapter: node() })
     .use(cors({ origin: "https://open-chat-roan.vercel.app" }))
     .use(userRoute)
     .use(notificationRoute)
