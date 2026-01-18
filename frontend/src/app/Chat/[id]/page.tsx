@@ -50,6 +50,7 @@ function Page() {
             if(data.type === "MISSED_MESSAGES"){
                 console.log("msg missed",data.msg);
             } else if(data.type === "message received"){
+                setTyping(false);
                 emit({ type: "seen" , activeId , session , msg: data.msg })
                 console.log("in the page/room");
                 console.log("msg", data.msg);
@@ -195,6 +196,7 @@ function Page() {
         try{
             setMsg(e.target.value)
             if(e.target.value.length === 0){
+                setTyping(false);
                 emit({ type: "Typing-stop" , activeId , session})
             } else if(e.target.value.length){
               console.log("user is typing...");
