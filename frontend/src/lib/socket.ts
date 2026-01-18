@@ -18,14 +18,10 @@ export function getSocket() {
       //   return
       // }
       console.log("notif",Notification.permission);
-      if(socket) {
+      if(socket && socket.readyState === WebSocket.OPEN) {
         const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        let subscription;
-        if(key) {
-          console.log("key",key);
-          subscription = await subscribeToPush(key);
-          console.log("subs",subscription);
-        }
+        console.log("key",key);
+        let subscription = await subscribeToPush(key);
         console.log("subs",subscription);
         socket.send(JSON.stringify({ type:"user-online", session , subscription }));
       } 
