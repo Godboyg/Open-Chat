@@ -15,6 +15,7 @@ export interface NotificationN {
   // type: "friend" | "message";
   type: string;
   message: string;
+  createdAt?: string;
   read: boolean;
   otherUser?: otherUser;
   notify?: notify;

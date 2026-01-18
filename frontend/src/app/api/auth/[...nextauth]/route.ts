@@ -31,6 +31,7 @@ const handler = NextAuth({
   callbacks: {
       async signIn({ user }) {
         try {
+        // const res = await axios.post("/api/app/user/create",
         const res = await axios.post("http://localhost:9100/user/create",
           { 
             email: user.email,

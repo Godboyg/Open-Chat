@@ -17,6 +17,19 @@ const friendShipSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 })
 
+friendShipSchema.index(
+  { requester: 1, recipient: 1 },
+  { unique: true }
+);
+
+friendShipSchema.index(
+  { requester: 1, recipient: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { requester: { $exists: true } }
+  }
+);
+
 const friend = mongoose.models.friend || mongoose.model("friend", friendShipSchema);
 
 export default friend;

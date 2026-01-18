@@ -10,6 +10,7 @@ export type convo = {
   _id: string;
   participents?: string[];
   conversationId?: string;
+  // createdAt: string;
   // conversationId?: string,
   lastMessage?: lastM;
 }

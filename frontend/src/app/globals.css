@@ -139,7 +139,7 @@ body {
 .chat-container::after {
   content: "";
   position: fixed;
-  top: 84%;
+  top: 85%;
   /* bottom: ; */
   left: 0;
   width: 100%;

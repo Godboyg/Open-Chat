@@ -4,9 +4,10 @@ import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import Dots from '../Components/Dots';
 import { motion , AnimatePresence } from 'motion/react';
 import { signOut } from 'next-auth/react';
-import { getSocket } from '@/lib/socket';
+import { getSocket , subscribe , emit } from '@/lib/socket';
 import { getCurrentTime } from './CurrentTime';
 import { useSession } from 'next-auth/react';
+import { Suspense } from "react";
 // import dynamic from 'next/dynamic'
 // import data from '@emoji-mart/data'
 import Image from 'next/image';
@@ -79,7 +80,7 @@ function Page() {
     const [thought , setThought] = useState<string | null | undefined>("");
     const [screenSize , setScreenSize] = useState(true);
     // const [allUsers, setAllUsers] = useState<number>()
-    const [soc , setSoc] = useState<WebSocket>()
+    const [typer , setTypers] = useState<string[]>([]);
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const [loading , setLoading] = useState<boolean>(false)
     const contRef = useRef<HTMLDivElement>(null);
@@ -89,6 +90,7 @@ function Page() {
     const clickTimeout = useRef<NodeJS.Timeout | null>(null);
     const [isTrue , setIsTrue] = useState(false);
     const [pMsg , setPMsg] = useState<any[]>([]);
+    const [conve , setConvo] = useState<string>("");
     const [messages , setMessages] = useState<message[]>([]
     //     () => {
     //   const saved = localStorage.getItem("msg");
@@ -110,7 +112,6 @@ function Page() {
     const [dclik , setDClick] = useState(false);
     // const [active , setActive] = useState(false);
     const [typing , setTyping] = useState<boolean>(false); 
-    const socketRef = useRef<WebSocket | null>(null);
     const profileRef = useRef<HTMLDivElement | null>(null);
     // const [activeUsers , setActiveUsers] = useState<activeUsers[]>([])
     // const [allActiveUsers , setAllActiveUsers] = useState<string[]>([]);
@@ -159,7 +160,7 @@ function Page() {
         currentUser();
 
         dispatch(setActiveConversation(null));
-    },[status , session])
+    },[session, status])
 
     useEffect(() => {
         const handleMouseDown = (e: Event) => {
@@ -246,6 +247,9 @@ function Page() {
      )
     );
 
+    const hasMessage = conversations.some(
+      convo => convo.message && convo?.message > 0
+    );
     console.log("111",conversations);
 
     useEffect(() => {
@@ -254,7 +258,7 @@ function Page() {
             if(containerRef.current && !containerRef.current.contains(target)){
                 setOpen(false);
                 setPMsg([]);
-                socketRef.current?.send(JSON.stringify({ type: "mark-d" , session }))
+                emit({ type: "mark-d" , session });
             }
         }
 
@@ -262,30 +266,9 @@ function Page() {
     },[])
 
     useEffect(() => {
-        if(socketRef.current?.readyState === 3 || socketRef.current?.readyState === 2){
-            toast.error("pls refresh the pege" , { duration: 2000 });
-        }
-    },[soc , status])
-
-    var socket;
-
-    useEffect(() => {
-        socket = getSocket();
-        console.log("sokket",socket);
-        if(!socket) return;
-        setSoc(socket);
-        socketRef.current = socket;
-        if(socket.readyState ===  3 || socket.readyState === 2){
-            toast.error("pls refresh the pege" , { duration: 2000 });
-        }
-
-        socket.onopen = (event) => {
-            console.log("socket is open now");
-            // setActive(true);
-        }
+        getSocket()
         
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        const unsubscribe = subscribe((data) => {
             console.log("data on message",data);
             if(data.isActive){
                 console.log("datasda",data);
@@ -348,8 +331,8 @@ function Page() {
                 // },14000)
             } else if (data.type === "PENDING_NOTIFICATIONS") {
                 console.log("PENDING_NOTIFICATIONS",data.data);
-                const formattedNotification = data.data.length > 0 ? data.data.map((n: { from: string; type: string; message: string; to: string; isRead: boolean; }) => ({
-                    _id: data.userId,
+                const formattedNotification = data.data.length > 0 ? data.data.map((n: { from: string; type: string; message: string; to: string; isRead: boolean; userId: string; }) => ({
+                    _id: n.userId,
                     to: n.from || n.to,
                     type: n.type,
                     message: n.message,
@@ -370,7 +353,7 @@ function Page() {
                          to: d.to,
                          status: "pending"
                        }))   
-                       socketRef.current?.send(JSON.stringify({ type: "done" , session }));
+                       emit({ type: "done" , session });
                     }
                     if(d.message === "friend by the user") {
                         dispatch(addFriend({
@@ -386,7 +369,7 @@ function Page() {
                         // }
                         // dispatch(upsertConversation(upsert));
                        dispatch(removeFriendRequest({ to: data.to , from: data.userId }))
-                       socketRef.current?.send(JSON.stringify({ type: "done" , session }));
+                       emit({ type: "done" , session });
                     }
                     if(d.conversationId){
                     // if(d.message === "request-accepted" || d.message === "REQUEST_RECEIVED" || d.message === "REQUEST_SENT"){
@@ -435,8 +418,17 @@ function Page() {
                 }));
             } else if(data.type === "Typing") {
                 setTyping(true);
+                setConvo(data.convo);
             } else if(data.type === "Typing-stop") {
                 setTyping(false);
+            } else if(data.type === "Typing-g") {
+                setTyping(true);
+                setTypers((prev) => prev.includes(data.session.user.image) ? prev : [...prev , data.session.user.image]);
+            } else if(data.type === "Typing-stop-g") {
+                setTyping(false);
+                setTypers((prev) => 
+                    prev.filter(user => user !== data.session.user.image)
+                )
             } else if(data.type === "user-unfrnd") {
                  dispatch(removeFriend({
                     _id: data.to,
@@ -460,24 +452,19 @@ function Page() {
             } else if(data.type === "request-sent") {
                 console.log("request",data.senderNotification , data.to , data.from);
                 dispatch(addFriendRequest({
-                    _id: session?.user.internalId ? session.user.internalId : "",
+                    _id: data.from,
                     to: data.to,
                     status: "pending"
                   }))
             }
-        }
+        })
 
-        socket.onclose = (event) => {
-            // setActive(false);
-            // setActiveUsers((prev) => 
-            //     prev.map((prv) => 
-            //         (prv.current.name === currentUser.name ? { ...prv , isActive: false } : prv)
-            //     )
-            // )
-        } 
+        return () => unsubscribe()
+    },[])
 
-        // return () => socket.close();
-    },[status , soc])
+     const matchedFriend = friend.find(
+          (fnd: Friend) => fnd._id === currentProfile?.User_id
+     );
 
     useEffect(() => {
         const store = async() => {
@@ -511,31 +498,6 @@ function Page() {
 
         store();
     },[status])
-
-    useEffect(() => {
-        try{
-            if(socketRef?.current?.readyState === 1) {
-                toast.success("socket connected");
-                socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
-                return;
-            } else if(socketRef.current?.readyState === 0) {
-                toast.error("connecting")
-                return;
-            } else if(socketRef.current?.readyState === 2 || socketRef.current?.readyState === 3) {
-                toast.error("pls refresh")
-                return;
-            }
-        } catch(error) {
-            console.log("error",error);
-        } 
-        // finally {
-        //     if(socketRef?.current?.readyState === 1) {
-        //         console.log("connected!")
-        //     } else {
-        //       toast.error("pls refresh");
-        //     }
-        // }
-    },[status , session])
 
     useEffect(() => {
         const cleaner = setInterval(() => {
@@ -592,15 +554,9 @@ function Page() {
 
     const handleSendMsg = () => {
         try{
-            if(!socketRef.current) {
-                toast.error("pls refresh!");
-            }
-            if (!thought?.trim() || !soc) return;
+            if (!thought?.trim()) return;
             const now = new Date();
             const timestamp = now.getTime();
-            if(!soc){
-                return;
-            }
             setThought("");
             const currentTime = getCurrentTime();
             const newMsg: message = { 
@@ -614,10 +570,11 @@ function Page() {
                 reply: replyTo ? [replyTo] : null
             }
             console.log("msg", newMsg)
-            soc.send(JSON.stringify(newMsg));
+            emit(newMsg);
             // setMessages((prev) => [...prev , newMsg]);
             setReplyTo(null);
             console.log("messagesss",messages);
+            emit({ type:"Typing-stop" ,session});
         } catch(error){
             console.log(error);
         }
@@ -691,7 +648,7 @@ function Page() {
     const handleEdit = () => {
         try{
             if(editTo){
-                soc?.send(JSON.stringify({ type: "toEdit" , msg: editTo , newMsg: thought }))
+                emit({ type: "toEdit" , msg: editTo , newMsg: thought });
              setMessages((prevMessage: any) => {
                 return prevMessage.map((prev: any) => {
                     return prev.text === editTo.text ? { ...prev , text: thought } : prev
@@ -712,9 +669,7 @@ function Page() {
         try{
             setDisabled(true);
             console.log("Request send");
-            if(socketRef.current){
-                socketRef.current?.send(JSON.stringify({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id}));
-            }
+            emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id});
         } catch(error) {
             console.log("Error",error);
         }
@@ -733,7 +688,7 @@ function Page() {
         try{
             // alert(val);
             console.log("data after accept",val)
-            socketRef.current?.send(JSON.stringify({ type: "friend-request-accepted" , from: val._id , to: val.to }))
+            emit({ type: "friend-request-accepted" , from: val._id , to: val.to });
         } catch(error) {
             console.log("error",error)
         }
@@ -744,24 +699,43 @@ function Page() {
             console.log("clickeddd");
             setOpen(true);
             setPMsg([]);
-            socketRef.current?.send(JSON.stringify({ type: "mark-d" , session }))
+            emit({ type: "mark-d" , session });
+        } catch(error) {
+            console.log("error",error);
+        }
+    }
+
+    const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+        try{
+            setThought(e.target.value);
+            if(e.target.value.length === 0){
+                emit({ type: "Typing-stop-g" , session})
+            } else if(e.target.value.length){
+              console.log("user is typing...");
+                emit({ type: "Typing-g" , session})
+              setTimeout(() => {
+                emit({ type:"Typing-stop-g" , session})
+              }, 3000);
+            }
         } catch(error) {
             console.log("error",error);
         }
     }
  
   return (
-    <div className={`h-screen relative w-full ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
+    <div className={`h-screen relative w-full ${mode ? "bg-black text-white" : "bg-white text-black"}`}>
         <Toaster />
         <div className="w-full flex items-center justify-center">
             {
                 show && (
-                    <Notification isOn={show} onIs={handleOnIs} notification={notify} close={handleClose} accepted={handleFriendRequestAccept}/>
+                    <Suspense fallback={<p>Loading..</p>}>
+                        <Notification isOn={show} onIs={handleOnIs} notification={notify} close={handleClose} accepted={handleFriendRequestAccept}/>
+                    </Suspense>
                 )
             }
         </div>
-        <div className="h-[9vh] px-3 flex items-center w-full">
-            <div className="p-3 md:py-5 md:px-6 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
+        <div className="py-3 px-3.5 flex items-center w-full">
+            <div className="p-4 md:py-3 md:px-4 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
              bg-black shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]"
             onClick={handleMsgClick}>
                 {
@@ -774,15 +748,16 @@ function Page() {
                                  </div>
                         </div>
                     ) : (
-                        conversations.length > 0 && conversations.map((convo , index) => (
-                            convo.message && convo.message > 0 
-                             ? <div className="relative"
-                             key={index}>
-                                <i className="ri-send-plane-line"></i>
-                                <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
-                             </div>
-                             : <Dots theme={mode}/>
-                        ))
+                        conversations.length > 0 && (
+                         hasMessage ? (
+                          <div className="relative">
+                            <i className="ri-send-plane-line"></i>
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
+                            </div>
+                          ) : (
+                           <Dots theme={mode} />
+                          )
+                         )
                     )
                 }
             </div>
@@ -806,13 +781,13 @@ function Page() {
             </div>
         </div>
         <div className="w-full flex items-center justify-center">
-            <div className="w-[95%] lg:w-[60%] px-2 md:px-5 py-2 relative h-[90vh]">
+            <div className="w-[95%] lg:w-[60%] px-2 relative h-[90vh]">
                 <div className="absolute w-full px-2 md:px-5 py-2 gap-2 md:gap-4 flex items-center justify-between bottom-0 left-0">
                     <div className="bg-black rounded-lg w-full h-full">
                         <input 
                          type="text"
                          value={thought ?? ""}
-                         onChange={(e) => setThought(e.target.value)}
+                         onChange={handleTyping}
                          placeholder='Write your mind...'
                          className={`px-3 py-4 w-full text-white rounded-lg border-none outline-none shadow-[0_0_15px_4px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]`}
                         />
@@ -854,7 +829,8 @@ function Page() {
                             <div
                             key={i}
                             className="w-full mb-0.5 rounded-md px-1.5">
-                             {
+                             <Suspense fallback={<p>Lo...</p>}>
+                                {
                                 !isSameUser && (
                                     <div className="flex mt-2 items-center">
                                 <div 
@@ -917,6 +893,7 @@ function Page() {
                                     </div>
                                 )
                              }
+                             </Suspense>
                              <div className="w-[60%]">
                                 {
                                     msg.reply?.map((rep: any , index) => (
@@ -986,6 +963,31 @@ function Page() {
                             )
                         )
                     )}
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 flex flex-wrap lg:max-w-[10vw] md:max-w-[15vw] max-w-[20vw] items-center">
+                            {
+                              typer && typing && typer.length > 0 && (
+                                typer.map((user, index) => {
+                                 return (
+                                     <Image
+                                       src={user}
+                                       alt='User'
+                                       key={index}
+                                       height={20}
+                                       width={20}
+                                       className='rounded-full object-cover hover:cursor-pointer'
+                                     />
+                                 )   
+                                })
+                              )
+                            }
+                        </div>
+                        <div>
+                            {
+                                typing && typer.length > 0 && <div className="text-sm text-gray-400">Typing....</div>
+                            }
+                        </div>
+                    </div>
                     <div ref={bottomRef}></div>
                     {showScrollButton && (
                      <div
@@ -1140,50 +1142,50 @@ function Page() {
                          </motion.div>
                          <motion.div>
                               {
-                                currentProfile?.User_id === session?.user.internalId ? (
-                                    <div className="w-full flex items-center justify-center mt-3">
-                                        <div className="w-[80%] bg-green-500 p-2 text-black rounded-md flex items-center justify-center">
-                                            View Profile
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="w-full flex items-center justify-center mt-3">
-                                        {
-                                            friend.length > 0 ? (
-                                                 <div className="w-full flex items-center justify-center">
-                                                    {
-                                                    friend.map((fnd: Friend , index) => (
-                                                         fnd._id === currentProfile?.User_id &&
-                                                         <div className="w-full flex text-white items-center p-2 hover:cursor-pointer justify-center rounded-md"
-                                                         key={index}
-                                                         onClick={() => {
-                                                            // alert("clicked")
-                                                            if(fnd.conversationId) {
-                                                                dispatch(setActiveConversation(fnd.conversationId))
-                                                                router.push(`/Chat/${fnd.conversationId}`)
-                                                                setLoading(true)
-                                                            }
-                                                         }}>
-                                                             <div className="w-[80%] bg-green-500 p-2 rounded-md flex items-center justify-center">
-                                                                { loading ? <span className='p-2 border-r-1 border-b-1 border-white h-4 w-4 rounded-full animate-spin'></span> : <span>Message</span> }
-                                                             </div>
-                                                         </div> 
-                                                     ))
-                                                    }
-                                                 </div>
-                                            ) : (
-                                                <div className={`w-[80%] flex items-center p-2 hover:cursor-pointer justify-center rounded-md
-                                                 ${disabled ? "bg-blue-900 text-gray-700" : "bg-blue-800 text-black "}`}
-                                                 onClick={handleSendRequest}>
-                                                     {
-                                                         disabled ? "Sended Request" : "Send Friend Request"
-                                                     }
-                                                </div> 
-                                            )
-                                        }
-                                    </div>
-                                )
-                              }
+  currentProfile?.User_id &&
+  session?.user.internalId &&
+  currentProfile.User_id === session.user.internalId ? (
+    <div className="w-full flex items-center justify-center mt-3">
+      <div className="w-[80%] bg-green-500 p-2 text-black rounded-md flex items-center justify-center">
+        View Profile
+      </div>
+    </div>
+
+  ) : (
+    <div className="w-full flex items-center justify-center mt-3">
+
+      {matchedFriend ? (
+        <div
+          className="w-[80%] bg-green-500 p-2 text-white rounded-md flex items-center justify-center hover:cursor-pointer"
+          onClick={() => {
+            if (matchedFriend.conversationId) {
+              dispatch(setActiveConversation(matchedFriend.conversationId));
+              router.push(`/Chat/${matchedFriend.conversationId}`);
+              setLoading(true);
+            }
+          }}
+        >
+          {loading ? (
+            <span className="p-2 h-4 w-4 border-2 border-white rounded-full animate-spin"></span>
+          ) : (
+            "Message"
+          )}
+        </div>
+
+      ) : (
+        <div
+          className={`w-[80%] p-2 flex items-center justify-center rounded-md hover:cursor-pointer
+            ${disabled ? "bg-blue-900 text-gray-700" : "bg-blue-800 text-black"}`}
+          onClick={!disabled ? handleSendRequest : undefined}
+        >
+          {disabled ? "Sent Request" : "Send Friend Request"}
+        </div>
+
+      )}
+
+    </div>
+  )
+}
                          </motion.div>
                        </motion.div>
                 </motion.div>
@@ -1258,19 +1260,19 @@ function Page() {
                                                                         <div className="mb-3.5">
                                                                             {convo?.otherUser?.fullName}                                                                       
                                                                         </div>
-                                                                        <div className="lg:text-[1vw] md:text-[2vw] sm:text-[2.4vw] text-[3vw]">
+                                                                        <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
                                                                             typing ? (
-                                                                                <small className='italic absolute top-4.5'>Typing.....</small>
+                                                                                conve === convo.convo._id && <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
                                                                               convo.convo.lastMessage?.senderId !== session?.user?.internalId 
                                                                                 ? <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
-                                                                                : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>{
+                                                                                : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
-                                                                                        <small>Sent</small>
+                                                                                        <small className="">Sent</small>
                                                                                     ) : (
-                                                                                        <small>{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                        <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
                                                                                     )
                                                                                 }</small>
                                                                             ) : (

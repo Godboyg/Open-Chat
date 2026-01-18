@@ -3,6 +3,7 @@ import conversation from "./conversation.js"
 import { DeliveryState } from "../ws/websocket.js";
 
 export interface IMessage {
+  clientMessageId: string;
   conversationId: Types.ObjectId;
   senderId: string;
   receiversId: string[];
@@ -14,6 +15,9 @@ export interface IMessage {
 }
 
 const MessageSchema = new mongoose.Schema<IMessage>({
+    clientMessageId: {
+      type: String
+    },
     conversationId: { 
         type: mongoose.Schema.Types.ObjectId,
         ref: "conversation"

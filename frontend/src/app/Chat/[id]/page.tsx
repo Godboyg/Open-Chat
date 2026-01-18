@@ -2,10 +2,11 @@
 import React, {  useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import 'remixicon/fonts/remixicon.css'
-import { getSocket } from '@/lib/socket';
+import { getSocket, subscribe , emit } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
 import { addMessage, markMessagesRead, setMessages } from '@/redux/messageSlice';
 import { updateLastMessage } from '@/redux/conversationSlice';
+import { Suspense } from "react";
 import axios from 'axios';
 import Image from 'next/image';
 import Typing from './Typing';
@@ -14,6 +15,7 @@ import { setUserOnline } from '@/redux/themeSlice';
 import { formatLastActive } from '@/lib/LastActive';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/navigation';
 
 function Page() {
 
@@ -23,15 +25,16 @@ function Page() {
     console.log("activeid",activeId);
     const dispatch = useAppDispatch();
     const { data: session , status } = useSession();
-    const socketRef = useRef<WebSocket | null>(null)
     const [typing , setTyping] = useState<boolean>(false);
     const [notFriend , setNotFriend] = useState<boolean>(false);
+    const params = useParams();
+    const chatid = params.id as string;
 
     const mode = useAppSelector((state) => state.theme.mode);
     const messages = useAppSelector((state) =>
-        state.messages.byConversationId[activeId ? activeId : ""]
+        state.messages.byConversationId[activeId ? activeId : chatid]
      ) || [];
-     const otherUser = useAppSelector((state) => state.conversations.byId[activeId ? activeId : ""]);
+     const otherUser = useAppSelector((state) => state.conversations.byId[activeId ? activeId : chatid]);
      console.log("other uwer",otherUser);
      const allOnlineUsers = useAppSelector((state) => state.theme.users);
      const lastMessage = messages.at(-1);
@@ -40,16 +43,14 @@ function Page() {
     console.log("messages",messages);
 
     useEffect(() => {
-        const socket = getSocket();
-        socketRef.current = socket;
-        console.log("socket in chat",socket);
+        getSocket()
     
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        const unsubscribe = subscribe((data) => {
+            console.log("data on msg page",data);
             if(data.type === "MISSED_MESSAGES"){
                 console.log("msg missed",data.msg);
             } else if(data.type === "message received"){
-                socketRef?.current?.send(JSON.stringify({ type: "seen" , activeId , session , msg: data.msg }))
+                emit({ type: "seen" , activeId , session , msg: data.msg })
                 console.log("in the page/room");
                 console.log("msg", data.msg);
                 dispatch(addMessage({
@@ -86,7 +87,7 @@ function Page() {
                 dispatch(markMessagesRead({ conversationId: activeId, userId: data.senderId }))
             } else if(data.type === "unread-msg") {
                 console.log("un read msg",data.unReadMsg);
-                socketRef?.current?.send(JSON.stringify({ type: "now seen" , activeId , senderId: data.senderId}))
+                emit({ type: "now seen" , activeId , senderId: data.senderId})
                 if(data.unReadMsg.length > 0){
                     dispatch(setMessages({
                      conversationId: activeId ? activeId : "",
@@ -103,31 +104,26 @@ function Page() {
                 setNotFriend(true);
                 console.log("add first then u can msg");
             }
-        }
+        })
+
+        return () => unsubscribe()
     },[])
 
     useEffect(() => {
-        if(!socketRef.current) return;
-
-        if(socketRef?.current && socketRef.current.readyState === 1){
-            socketRef?.current?.send(JSON.stringify({ type: "msg read" , activeId , session }))
-        }
+        emit({ type: "msg read" , activeId , session });
     },[messages])
 
     useEffect(() => {
-            if(!socketRef.current) return;
-    
-            if(socketRef.current.readyState === 1){
-                socketRef.current.send(JSON.stringify({ type:"user-online", session }))
-                socketRef.current.send(JSON.stringify({ type: "msg read" , activeId , session }))
-                socketRef.current.send(JSON.stringify({ type: "msg read online" , activeId , session }))
-            }
-    },[socketRef , status])
+        emit({ type:"user-online", session });
+        emit({ type: "msg read" , activeId , session });
+        emit({ type: "msg read online" , activeId , session });
+    },[status])
 
     const handleSendMsg = () => {
         try{
             const now = new Date();
             const message = {
+                clientMessageId: crypto.randomUUID(),
                 text: msg,
                 activeId: activeId,
                 type: "message sent",
@@ -153,12 +149,9 @@ function Page() {
                     }
                 }))
             }
-            if(socketRef.current?.readyState === 1) {
-                socketRef.current?.send(JSON.stringify(message));
-            } else {
-                toast.error("socket not connected try again!");
-            }
+            emit(message);
             setMsg("");
+            emit({ type:"Typing-stop" , activeId , session})
         } catch(error) {
             console.log("error",error);
         }
@@ -171,11 +164,7 @@ function Page() {
    }, [messages]);
 
     useEffect(() => {
-        if(!socketRef.current) return;
-
-        if(msg.length > 0) {
-            socketRef.current.send(JSON.stringify({ type: "Typing" , activeId , session }))
-        }
+        emit({ type: "Typing" , activeId , session });
     },[msg])
 
     useEffect(() => {
@@ -204,17 +193,14 @@ function Page() {
 
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         try{
-            if(!socketRef.current) return;
             setMsg(e.target.value)
             if(e.target.value.length === 0){
-             socketRef.current.send(JSON.stringify({ type: "Typing-stop" , activeId , session}))
+                emit({ type: "Typing-stop" , activeId , session})
             } else if(e.target.value.length){
               console.log("user is typing...");
-              socketRef.current.send(JSON.stringify({ type: "Typing" , activeId , session}))
+                emit({ type: "Typing" , activeId , session})
               setTimeout(() => {
-               if(socketRef.current){
-                socketRef.current.send(JSON.stringify({ type:"Typing-stop" , activeId , session}));
-               }
+                emit({ type:"Typing-stop" , activeId , session})
               }, 3000);
             }
         } catch(error) {
@@ -281,7 +267,8 @@ function Page() {
               className="w-full h-[80%] overflow-auto flex flex-col gap-2"
               ref={chatRef}
             >
-                {
+                <Suspense fallback={<p>Loading.....</p>}>
+                    {
                     messages.length > 0 ? (
                         messages.map((msg: any, index) => {
                             const currentDate = formatMessageDateHeader(msg.createdAt);
@@ -326,6 +313,7 @@ function Page() {
                         </div>
                     )
                 }
+                </Suspense>
                 {
                     isSeen && lastMessage.senderId === session?.user.internalId ? (
                         <div className="w-full text-end text-red-500">

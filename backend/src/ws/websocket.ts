@@ -5,9 +5,20 @@ import notification from '../models/notification.js';
 import conversation from '../models/conversation.js';
 import User from '../models/user.js';
 import Message from '../models/messages.js';
+import type { IncomingMessage } from "http";
+import { sendPushNotification } from '../lib/push.js';
 
 interface ExtWebSocket extends WebSocket {
   userId?: string;
+}
+
+interface PushSubscription {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
 }
 
 export type DeliveryState = "sent" | "delivered" | "read";
@@ -26,16 +37,17 @@ let nextId = 1;
 
 const clients = new Set<ExtWebSocket>();
 
+const subscriptions = new Map<string, PushSubscription>();
 const wsToUser = new Map();
 
 const CHAT_KEY = "global_chat";
 const CHAT_TTL = 300;
 
-wss.on('connection', (ws: ExtWebSocket) => {
+wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
   console.log('🟢 New WebSocket connection');
   clients.add(ws);
 
-  clients.forEach((cl) => {
+  clients.forEach(async(cl) => {
     console.log("sended");
     cl.send(JSON.stringify({ type:"onlineUsers", text: "socket connected" , size: `${clients.size}`}));
   })
@@ -77,7 +89,13 @@ wss.on('connection', (ws: ExtWebSocket) => {
         } else if(data.type === "toEdit"){
           cl.send(JSON.stringify({ type: data.type , msg: data.msg , newMsg: data.newMsg }))
         } else if(data.type === "user-online"){
+          const subs = data.subscription as PushSubscription;
+          subscriptions.set(data.session?.user.internalId , subs);
+          console.log(subscriptions);
           console.log("user online data",data);
+          if(data.session === null) {
+            ws.send(JSON.stringify({ type:"session-missing" }))
+          }
           
           const messages = await redis.zrange(CHAT_KEY, 0, -1);
           console.log("mess",messages);
@@ -85,7 +103,7 @@ wss.on('connection', (ws: ExtWebSocket) => {
           const parsedMessages = messages.map(m => JSON.parse(m));
           console.log(parsedMessages);
 
-          const socket = wsToUser.get(data?.session?.user.internalId);
+          const socket = wsToUser.get(data.session?.user.internalId);
           if(socket) {
             console.log("sended");
             socket.send(JSON.stringify({ type:"chat_history", parsedMessages}));
@@ -116,90 +134,87 @@ wss.on('connection', (ws: ExtWebSocket) => {
             message: pendingMsg
           }))
 
-          await redis.sadd("online_users", data.session?.user?.internalId ?? "");
+          const userId = data.session?.user?.internalId;
+          if (userId) {
+            await redis.sadd("online_users", userId);
+          }
 
           const onlineUsers = await redis.smembers("online_users");
 
-          for(const user of onlineUsers) {
-            const socket = wsToUser.get(user);
+          const staleUsers: string[] = [];
 
-            if(!socket){
-                await redis.srem("online_users", user);
+          for(const user of onlineUsers) {
+            if(!wsToUser.has(user)) {
+              staleUsers.push(user)
             }
           }
 
-          const onlineUser = await redis.smembers("online_users");
+          if(staleUsers.length > 0) {
+            await redis.srem("online_users", ...staleUsers);
+          }
 
-          console.log("kinline",onlineUsers)
-          const payload = JSON.stringify({
+          const cleanedOnlineUsers = staleUsers.length > 0
+             ? await redis.smembers("online_users")
+             : onlineUsers;
+
+          cl.send(JSON.stringify({
             type: "ONLINE_USERS",
-            users: onlineUser
-          })
-          cl.send(payload);
+            users: cleanedOnlineUsers
+          }));
         } else if(data.type === "friend-request") {
           console.log(data.to , data.from);
           const receiver = wsToUser.get(data.to);
           const senderId = wsToUser.get(data.from);
-          const isThere = await friend.findOne({
-            $or: [
-              {
-              requester: data.from,recipient: data.to
-            },
-            {
-              requester: data.to,
-             recipient: data.from
-            }
-          ]
-          }) 
-           if(!isThere){
-            await friend.create({
-             requester: data.from,
-             recipient: data.to
-            })
-           }
-           const isNotThere = await notification.findOne({
-            $or:[ 
-              {
-                userId: data.to,
-              from: data.from,
-              } , {
-                userId: data.from,
-                from: data.to
-              }
-            ]
-           })
-           const sender = await notification.findOne({
-            $or:[ 
-              {
-                userId: data.to,
-              to: data.from,
-              } , {
-                userId: data.from,
-                to: data.to
-              }
-            ]
-           })
-           let notificationReceived;
-           let senderNotification;
-           if(!isNotThere){
-            notificationReceived = await notification.create({
-              userId: data.to,
-              from: data.from,
-              type: "FRIEND_REQUEST",
-              message: "REQUEST_RECEIVED",
-              isRead: false
-            })
-           }
 
-           if(!sender) {
-            senderNotification = await notification.create({
-              userId: data.from,
-              to: data.to,
-              type: "FRIEND_REQUEST",
-              message: "REQUEST_SENT",
-              isRead: false
-            })
+          const [userA, userB] = [data.from, data.to].sort();
+          
+          const result = await friend.updateOne(
+             { requester: userA, recipient: userB },
+             { $setOnInsert: { requester: userA, recipient: userB } },
+             { upsert: true }
+           );
+
+           if (result.upsertedCount > 0) {
+             console.log("Friend request created");
+           } else {
+             console.log("Friend request already exists");
            }
+           let senderNotification = await notification.findOneAndUpdate(
+               {
+                 userId: data.from,
+                 to: data.to,
+                 type: "FRIEND_REQUEST"
+               },
+               {
+                $setOnInsert: {
+                  userId: data.from,
+                  to: data.to,
+                  type: "FRIEND_REQUEST",
+                  message: "REQUEST_SENT",
+                  isRead: false
+               }
+               },
+               { upsert: true }
+               );
+
+          let notificationReceived = await notification.findOneAndUpdate(
+              {
+                userId: data.to,
+                from: data.from,
+                type: "FRIEND_REQUEST"
+              },
+              {
+                $setOnInsert: {
+                  userId: data.to,
+                  from: data.from,
+                  type: "FRIEND_REQUEST",
+                  message: "REQUEST_RECEIVED",
+                 isRead: false
+                }
+                 },
+                { upsert: true }
+             );
+
           if (receiver) {
             const found = await User.findOne({ uniqueUserId: data.from })
             console.log("found",found);
@@ -225,19 +240,22 @@ wss.on('connection', (ws: ExtWebSocket) => {
           const from = wsToUser.get(data.from);
           const to = wsToUser.get(data.to);
 
-          const isConvo = await conversation.findOne({
-            type: "direct",
-            participents: { $all: [data.to , data.from ]}
-          })
+          console.log("to: from:", data.to , data.from);
 
+          const participents = [data.from.toString(), data.to.toString()].sort();
+          const friendKey = participents.join("_");
+          console.log("participents",participents);
+          console.log("participents2",friendKey);
           let newConversation;
-
-          if(!isConvo){
+          newConversation = await conversation.findOne({ friendKey });
+          if(!newConversation) {
             newConversation = await conversation.create({
               type: "direct",
-              participents: [data.from , data.to]
+              participents,
+              friendKey
             })
           }
+          console.log("newConversation",newConversation)
 
           const newFriend = await friend.findOneAndUpdate(
             {
@@ -254,12 +272,12 @@ wss.on('connection', (ws: ExtWebSocket) => {
             {
               $set: {
                 status: "accepted",
-                conversationId: newConversation?._id || isConvo?._id
+                conversationId: newConversation?._id
               }
             }, 
-            // {
-            //   new: true
-            // }
+            {
+              new: true
+            }
           )
 
           // const toUser = await User.findOne({
@@ -281,8 +299,11 @@ wss.on('connection', (ws: ExtWebSocket) => {
             ]
           },{
              $set: {
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
              }
+          }, 
+            {
+              new: true
           })
           const getNotifySnder = await notification.findOneAndUpdate({
             $or: [
@@ -296,14 +317,14 @@ wss.on('connection', (ws: ExtWebSocket) => {
             ]
           },{
              $set: {
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
              }
           })
 
           if(from) {
             from.send(JSON.stringify({ 
               type: "request-accepted" , newFriend , newConversation,
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               _id: data.to,
               from: data.from,
               status: "accepted"
@@ -314,14 +335,14 @@ wss.on('connection', (ws: ExtWebSocket) => {
               to: data.to,
               type: "STATE_CHANGE",
               message: "friend by the user",
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               isRead: false
             })
           }
           if(to) {
             to.send(JSON.stringify({ 
               type: "request-accepted" , newFriend , newConversation ,
-              conversationId: newConversation?._id || isConvo?._id,
+              conversationId: newConversation?._id,
               _id: data.from,
               from: data.to,
               status: "accepted"
@@ -411,25 +432,22 @@ wss.on('connection', (ws: ExtWebSocket) => {
             });
             console.log("delivery status",deliveryStatus);
 
-            // const isMsg = await Message.findOne({
-            //   conversationId: id,
-            //   senderId: data.senderId,
-            //   text: data.text,
-            //   receiversId,
-            //   deliveryStatus
-            // })
+            const exists = await Message.findOne({
+              clientMessageId: data.clientMessageId
+            })
 
-            let msg = await Message.create({
+             if(exists) {
+               return;
+             }
+
+             let msg = await Message.create({
+                clientMessageId: data.clientMessageId,
                 conversationId: id,
                 senderId: data.senderId,
                 text: data.text,
                 receiversId,
                 deliveryStatus
               })
-
-              if(!msg) {
-                return
-              }
 
              await conversation.findByIdAndUpdate(
                 id,
@@ -447,7 +465,18 @@ wss.on('connection', (ws: ExtWebSocket) => {
 
               const socket = wsToUser.get(userId);
               if(socket){
+                console.log("sended msg");
                 socket.send(JSON.stringify({ type: "message received" , msg }))
+              } else {
+                const webPushSubscription = subscriptions.get(userId) as PushSubscription;
+                if(webPushSubscription) {
+                  await sendPushNotification(webPushSubscription, {
+                    title: "New Message",
+                    body: "User A sent you a message",
+                    from: "userA",
+                    url: "/chat/userA",
+                  })
+                }
               }
 
               // if(socket){
@@ -565,33 +594,40 @@ wss.on('connection', (ws: ExtWebSocket) => {
         } else if(data.type === "Typing") {
           try{
             const convo = await conversation.findById(data.activeId);
-            for(const part of convo.participents) {
-              if(part === data.session.user.internalId) continue;
+              for(const part of convo.participents) {
+               if(part === data.session.user.internalId) continue;
 
-              const socket = wsToUser.get(part);
+               const socket = wsToUser.get(part);
 
-              if(socket) {
-                socket.send(JSON.stringify({ type: "Typing" }))
+               if(socket) {
+                socket.send(JSON.stringify({ type: "Typing" , convo: data.activeId }))
+               }
               }
-            }
           } catch(error) {
             console.log("error",error);
           }
         } else if(data.type === "Typing-stop") {
           try{
             const convo = await conversation.findById(data.activeId);
-            for(const part of convo.participents) {
-              if(part === data.session.user.internalId) continue;
+              for(const part of convo.participents) {
+                if(part === data.session.user.internalId) continue;
 
-              const socket = wsToUser.get(part);
+                const socket = wsToUser.get(part);
 
-              if(socket) {
-                socket.send(JSON.stringify({ type: "Typing-stop" }))
+                if(socket) {
+                  socket.send(JSON.stringify({ type: "Typing-stop" , session: data.session }))
+                }
               }
-            }
           } catch(error) {
             console.log("Error",error);
           }
+        } else if(data.type === "Typing-g") {
+           const socket = wsToUser.get(data.session?.user?.internalId);
+           if(socket && cl !== socket) {
+             cl.send(JSON.stringify({ type: "Typing-g" , session: data?.session}));
+           };
+        } else if(data.type === "Typing-stop-g") {
+          cl.send(JSON.stringify({ type: "Typing-stop-g" , session: data?.session}));
         } else if(data.type === "seen") {
           try{
             console.log("data",data.msg);

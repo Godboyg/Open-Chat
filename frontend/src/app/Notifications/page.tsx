@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import React, { useEffect, useRef, useState } from 'react'
 import Image from 'next/image';
-import { getSocket } from '@/lib/socket';
+import { getSocket , subscribe , emit } from '@/lib/socket';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
@@ -24,16 +24,25 @@ function Page() {
     const requests = useAppSelector((state) => state.friends.requests);
     console.log("all friends",friends);
     console.log("all requests",requests);
-    const socketRef = useRef<null | WebSocket>(null)
-    // const [loading , setLoading] = useState<boolean>(true)
+    const [loading , setLoading] = useState<boolean>(true)
+    function convertToISTTime(utcISOString: any) {
+  return new Date(utcISOString)
+    .toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    })
+    .toLowerCase();
+}
 
     useEffect(() =>{
-        const socket = getSocket();
-        socketRef.current = socket;
+        getSocket();
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        const unsubscribe = subscribe((data) => {
+            console.log("data on message on notification page",data);
             if(data.type === "user-unfrnd"){
+                setLoading(false);
                 dispatch(removeFriend({
                     _id: data.to
                 }));
@@ -71,23 +80,21 @@ function Page() {
                 }
                 dispatch(upsertConversation(upsert));
             }
-        }
+        })
+
+        return () => unsubscribe()
     },[])
 
     useEffect(() => {
-        if(!socketRef.current) return;
-
-        if(socketRef.current?.readyState === 1){
-            socketRef.current?.send(JSON.stringify({ type:"user-online", session }));
-            socketRef.current?.send(JSON.stringify({ type:"mark-n", session }));
-            if(session?.user.internalId) {
-                dispatch(markAllRead(session?.user?.internalId));
-            }
+        emit({ type:"user-online", session });
+        emit({ type:"mark-n", session });
+        if(session?.user.internalId) {
+           dispatch(markAllRead(session?.user?.internalId));
         }
     },[status])
 
     useEffect(() => {
-        if(!session) return
+        if(!session) return;
 
         const allNotification = async() => {
             try{
@@ -99,6 +106,9 @@ function Page() {
 
                 const result = res.data.data;
                 console.log("result",result);
+                if(result) {
+                    setLoading(false);
+                }
                 if(result.length > 0) {
                     console.log("adding")
                     const formattedNotification = 
@@ -106,6 +116,7 @@ function Page() {
                         _id: session.user.internalId,
                         type: n.notify.type,
                         message: n.notify.message,
+                        createdAt: n.notify.createdAt,
                         read: true,
                         otherUser: {
                             image: n.otherUser.image,
@@ -121,6 +132,20 @@ function Page() {
                         console.log("added")
                         dispatch(addNotification(formattedNotification));
                     }
+
+                    if (result.length > 0) {
+                       result.forEach((n: any) => {
+                         if(!n.notify.conversationId) {
+                             dispatch(
+                               addFriendRequest({
+                                 _id: n.notify._id,
+                                 to: n.notify.to || n.notify.from,
+                                 status: "pending",
+                               })
+                             );
+                         }
+                       });
+                    }
                 }
             } catch(err) {
                 console.log("error",err);
@@ -132,10 +157,7 @@ function Page() {
 
     const handleUnFrnd = (fnd: Friend) => {
         try{
-            if(!socketRef.current){
-                toast.error("error pls try again");
-            }
-            socketRef.current?.send(JSON.stringify({ type:"unFrnd" , session , fnd }))
+            emit({ type:"unFrnd" , session , fnd });
         } catch(error) {
             console.log("error",error);
         }
@@ -143,14 +165,12 @@ function Page() {
 
     const handleAccept = (val: NotificationN) => {
         try {
-            if(socketRef.current?.readyState === 1){
-                socketRef.current?.send(JSON.stringify({ 
-                    type:"friend-request-accepted",
-                    to: val._id , from: val.otherUser?.uniqueId
-                }))
-            } else {
-                toast.error("failed to accept try again!");
-            }
+           setLoading(true);
+            emit({ 
+                type:"friend-request-accepted",
+                to: val._id , from: val.otherUser?.uniqueId
+            })
+            console.log("to: from:",val._id ,val.otherUser?.uniqueId)
         } catch(Error) {
             console.log("Errr",Error);
         }
@@ -164,7 +184,7 @@ function Page() {
                 <h2 className='font-bold text-xl'>Notifications</h2>
             </div>
             {
-                notification.length > 0 ? (
+                !loading && notification.length > 0 ? (
                     notification.map((notify, index) => {
 
                         const currentDate = formatMessageDateHeader(notify?.notify?.createdAt);
@@ -202,80 +222,66 @@ function Page() {
                                  <div className="text-sm  px-2 py-1 text-white w-full break-words break-all whitespace-normal leading-snug">
                                    <span className='font-bold text-md'>{notify.otherUser?.name}</span>
                                     {
-                                    friends.map((fnd: Friend , index) => (
-                                        fnd._id === notify?.otherUser?.uniqueId && (
-                                            <span className='ml-2'
-                                            key={index}>u r frnds.</span>
-                                        )
-                                    ))
-                                    }
-                                    {
-                                        requests.map((req , index) => (
-                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && req._id && (
-                                                <span className='ml-2'
-                                                key={index}>requested frnd request to you.</span>
-                                            )
-                                        ))
-                                    }
-                                    {
-                                        requests.map((req , index) => (
-                                            req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
-                                                <span className='ml-2'
-                                                key={index}>you requested to be friends.</span>
-                                            )
-                                        ))
-                                    }
+  friends.some(
+    (fnd: Friend) => fnd._id === notify?.otherUser?.uniqueId
+  ) ? (
+    <span className="ml-2">
+      and you are friends.
+        <small className="ml-3 text-gray-500">{convertToISTTime(notify.createdAt ? notify.createdAt : "")}</small>
+    </span>
+  ) : notify?.message === "REQUEST_SENT" ? (
+    <span className="ml-2">
+      you requested to be friends.
+        <small className="ml-3 text-gray-500">{convertToISTTime(notify.createdAt ? notify.createdAt : "")}</small>
+    </span>
+  ) : notify?.message === "REQUEST_RECEIVED" ? (
+    <span className="ml-2">
+      sent friend request to you.
+        <small className="ml-3 text-gray-500">{convertToISTTime(notify.createdAt ? notify.createdAt : "")}</small>
+    </span>
+  ) : null
+}
                                  </div>
                                    <div className="bg-blue-500 rounded-md">
-                                 {
-                                    friends.map((fnd: Friend , index) => (
-                                        fnd._id === notify?.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && (
-                                            <div className="px-3 py-1.5 text-sm hover:cursor-pointer"
-                                            key={index}
-                                            onClick={() => handleUnFrnd(fnd)}>
-                                                UnFrnd
-                                            </div>
-                                        ) 
-                                        ))
-                                 }
-                                 {
-                                    friends.map((fnd: Friend , index) => (
-                                        fnd._id === notify?.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && (
-                                            <div className="px-3 py-1.5 text-sm hover:cursor-pointer"
-                                            key={index}
-                                            // onClick={() => handleUnFrnd(fnd)}
-                                            >
-                                                Friends
-                                            </div>
-                                        ) 
-                                        ))
-                                 }
-                                  {
-                                    requests.map((req , index) => (
-                                        req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_RECEIVED" && (
-                                            <button 
-                                            className='px-3 hover:cursor-pointer py-1.5 text-sm hover:pointer'
-                                            key={index}
-                                            onClick={() => handleAccept(notify)} 
-                                            >
-                                                Accept
-                                            </button>
-                                        )
-                                    ))
-                                  }
-                                  {
-                                    requests.map((req , index) => (
-                                        req.to === notify.otherUser?.uniqueId && notify.message === "REQUEST_SENT" && req._id && (
-                                            <button 
-                                            className='px-3 hover:cursor-pointer py-1.5 text-sm hover:pointer'
-                                            key={index}
-                                            // onClick={() => handleAccept(notify)} 
-                                            >
-                                                Pending
-                                            </button>
-                                        )
-                                    ))
-                                  }
+                                       {
+  friends.some(
+    (fnd: Friend) => fnd._id === notify?.otherUser?.uniqueId
+  ) ? (
+    notify?.message === "REQUEST_SENT" ? (
+      <div className="px-3 py-1.5 text-sm hover:cursor-pointer">
+        Friends
+      </div>
+    ) : notify?.message === "REQUEST_RECEIVED" ? (
+      <div
+        className="px-3 py-1.5 text-sm hover:cursor-pointer"
+        onClick={() => handleUnFrnd(
+          friends.find(
+            (fnd: Friend) => fnd._id === notify?.otherUser?.uniqueId
+          )!
+        )}
+      >
+        UnFriend
+      </div>
+    ) : null
+  ) : notify?.message === "REQUEST_RECEIVED" ? (
+    <button
+      className="px-3 py-1.5 text-sm hover:cursor-pointer"
+      onClick={() => handleAccept(notify)}
+    >
+      {
+        loading ? (
+          <div className="w-3 h-3 border-3 border-gray-700 border-t-cyan-500 rounded-full animate-spin"></div>
+        ) : (
+          <span>Accept</span>
+        )
+      }
+    </button>
+  ) : notify?.message === "REQUEST_SENT" ? (
+    <button className="px-3 py-1.5 text-sm hover:cursor-pointer">
+      Requested
+    </button>
+  ) : null
+}
                                    </div>
                                </div>
                             </>
@@ -284,7 +290,12 @@ function Page() {
                 ) : (
                     <div className="">
                         {
-                        Text && (
+                            loading && <div className="w-full mt-10 flex items-center justify-center">
+                              <div className="w-4 h-4 border-3 border-gray-800 border-t-cyan-600 rounded-full animate-spin"></div>
+                            </div>
+                        }
+                        {
+                        !loading && Text && (
                          <p className="text-2xl font-bold flex gap-2 justify-center items-center h-32">
                                {Text.map((word, index) => (
                                <motion.div

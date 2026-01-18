@@ -10,6 +10,8 @@ import Dots from './Components/Dots';
 import { useRouter } from 'next/navigation';
 import RunningBorderBox from './Components/RunningBorderBox';
 import axios from "axios"
+import { getSocket } from '@/lib/socket';
+import toast from 'react-hot-toast';
 
 interface User {
   name: string | null | undefined;
@@ -63,6 +65,20 @@ function Page() {
   // },[])
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("Service Worker registered"))
+        .catch(console.error);
+    }
+
+    const notification = Notification.permission;
+    if(notification === 'denied') {
+      toast.error("pls allow notification permission");
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchUser = async() => {
        try{
       const res = await axios.get("/api/app/user/current" , {
@@ -86,6 +102,11 @@ function Page() {
     }
 
     fetchUser();
+
+    if(status === "authenticated") {
+      const socket = getSocket();
+    }
+
   },[status])
   
   useEffect(() => {
@@ -120,11 +141,22 @@ function Page() {
     },1000)
   }
 
+  async function initPush() {
+  const permission = await Notification.requestPermission();
+  console.log("Permission:", permission);
+
+  if (permission !== "granted") {
+    throw new Error("User denied notifications");
+  }
+
+  // now subscribe
+}
+
   return (
     <div
       className={`relative h-screen  
          overflow-hidden
-        ${mode === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}
+        ${mode ? 'bg-black text-white' : 'bg-white text-black'}`}
     >
       <div className="w-full max-md:flex z-9 fixed hidden backdrop-blur-xl items-center justify-between h-10">
         <div className="">
@@ -242,6 +274,7 @@ function Page() {
           <RunningBorderBox clicked={handleOnClick}/>
         </div>
       </div>
+      <button onClick={initPush}>Enable Notifications</button>
     </div>
   )
 }
