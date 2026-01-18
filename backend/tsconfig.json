@@ -45,6 +45,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "include": ["src"],
+  // "include": ["src"],
+  "include": ["src/types/**/*.d.ts", "src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
