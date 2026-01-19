@@ -21,7 +21,7 @@ export function getSocket() {
       if(socket && socket.readyState === WebSocket.OPEN) {
         const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         console.log("key",key);
-        let subscription = await subscribeToPush(key);
+        let subscription = await subscribeToPush(key ? key : "");
         console.log("subs",subscription);
         socket.send(JSON.stringify({ type:"user-online", session , subscription }));
       } 
