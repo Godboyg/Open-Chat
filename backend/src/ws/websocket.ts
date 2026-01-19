@@ -473,8 +473,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                 if(webPushSubscription) {
                   await sendPushNotification(webPushSubscription, {
                     title: "New Message",
-                    body: "User A sent you a message",
-                    from: "userA",
+                    body: `${data.session?.user.name} sent you a message`,
+                    from: `${data.session?.user.name}`,
                     url: "/chat/userA",
                   })
                 }
