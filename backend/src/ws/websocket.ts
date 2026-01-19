@@ -437,22 +437,23 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             });
             console.log("delivery status",deliveryStatus);
 
-            const exists = await Message.findOne({
-              clientMessageId: data.clientMessageId
-            })
-
-             if(exists) {
-               return;
-             }
-
-             let msg = await Message.create({
-                clientMessageId: data.clientMessageId,
-                conversationId: id,
-                senderId: data.senderId,
-                text: data.text,
-                receiversId,
-                deliveryStatus
-              })
+             const msg = await Message.findOneAndUpdate(
+               { clientMessageId: data.clientMessageId },
+               {
+                 $setOnInsert: {
+                   clientMessageId: data.clientMessageId,
+                   conversationId: id,
+                   senderId: data.senderId,
+                   text: data.text,
+                   receiversId,
+                   deliveryStatus
+                 }
+               },
+               {
+                 new: true,
+                 upsert: true
+               }
+             );
 
              await conversation.findByIdAndUpdate(
                 id,
