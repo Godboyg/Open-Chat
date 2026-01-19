@@ -16,7 +16,8 @@ export interface IMessage {
 
 const MessageSchema = new mongoose.Schema<IMessage>({
     clientMessageId: {
-      type: String
+      type: String,
+      unique: true
     },
     conversationId: { 
         type: mongoose.Schema.Types.ObjectId,
