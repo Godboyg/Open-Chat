@@ -1264,8 +1264,8 @@ function Page() {
                                                                         </div>
                                                                         <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
-                                                                            typing ? (
-                                                                                conve === convo.convo._id && <small className='italic absolute top-4.5'>Typing.....</small>
+                                                                            conve === convo.convo._id && typing ? (
+                                                                                 <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
                                                                               convo.convo.lastMessage?.senderId !== session?.user?.internalId 
