@@ -248,8 +248,12 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           console.log("participents",participents);
           console.log("participents2",friendKey);
           let newConversation;
-          newConversation = await conversation.findOne({ friendKey });
-          if(!newConversation) {
+          if(friendKey) {
+            newConversation = await conversation.findOne({ friendKey });
+          } else {
+            ws.send(JSON.stringify({ type:"try again!" }))
+          }
+          if(!newConversation && friendKey) {
             newConversation = await conversation.create({
               type: "direct",
               participents,
