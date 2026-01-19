@@ -12,7 +12,7 @@ const conversationSchema = new mongoose.Schema({
     friendKey: {
         type: String,
         unique: true
-    }
+    },
     lastMessage: {
         text: {
             type: String
