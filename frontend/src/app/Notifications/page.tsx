@@ -24,7 +24,8 @@ function Page() {
     const requests = useAppSelector((state) => state.friends.requests);
     console.log("all friends",friends);
     console.log("all requests",requests);
-    const [loading , setLoading] = useState<boolean>(true)
+    const [loading , setLoading] = useState<boolean>(true);
+    const [isLoading , setisLoading] = useState<boolean>(false);
     function convertToISTTime(utcISOString: any) {
   return new Date(utcISOString)
     .toLocaleTimeString("en-IN", {
@@ -42,7 +43,6 @@ function Page() {
         const unsubscribe = subscribe((data) => {
             console.log("data on message on notification page",data);
             if(data.type === "user-unfrnd"){
-                setLoading(false);
                 dispatch(removeFriend({
                     _id: data.to
                 }));
@@ -65,6 +65,7 @@ function Page() {
                 dispatch(removeFriendRequest(data.to))
                 console.log("u unfrnd the user", data.newFriend)
             } else if(data.type === "request-accepted") {
+                setisLoading(false);
                dispatch(addFriend({
                    _id: data._id,
                    status: data.status,
@@ -165,7 +166,7 @@ function Page() {
 
     const handleAccept = (val: NotificationN) => {
         try {
-           setLoading(true);
+           setisLoading(true);
             emit({ 
                 type:"friend-request-accepted",
                 to: val._id , from: val.otherUser?.uniqueId
@@ -269,7 +270,7 @@ function Page() {
       onClick={() => handleAccept(notify)}
     >
       {
-        loading ? (
+        isLoading ? (
           <div className="w-3 h-3 border-3 border-gray-700 border-t-cyan-500 rounded-full animate-spin"></div>
         ) : (
           <span>Accept</span>
