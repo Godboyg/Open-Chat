@@ -90,8 +90,9 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           cl.send(JSON.stringify({ type: data.type , msg: data.msg , newMsg: data.newMsg }))
         } else if(data.type === "user-online"){
           const subs = data.subscription as PushSubscription;
-          subscriptions.set(data.session?.user.internalId , subs);
-          console.log(subscriptions);
+          if(subs) {
+            subscriptions.set(data.session?.user.internalId , subs);
+          }
           console.log("user online data",data);
           if(data.session === null) {
             ws.send(JSON.stringify({ type:"session-missing" }))
