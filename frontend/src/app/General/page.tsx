@@ -277,6 +277,8 @@ function Page() {
                 //     if(exists) return prev;
                 //     return [...prev , data];
                 // })
+            } else if(data.type === "session-missing") {
+                toast.error("Session missing login again!");
             }
             else if(data.type === "thought"){
                 setMessages((prev) => [...prev, data]);
