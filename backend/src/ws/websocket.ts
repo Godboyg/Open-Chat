@@ -7,6 +7,7 @@ import User from '../models/user.js';
 import Message from '../models/messages.js';
 import type { IncomingMessage } from "http";
 import { sendPushNotification } from '../lib/push.js';
+import { error } from 'console';
 
 interface ExtWebSocket extends WebSocket {
   userId?: string;
@@ -90,7 +91,11 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           cl.send(JSON.stringify({ type: data.type , msg: data.msg , newMsg: data.newMsg }))
         } else if(data.type === "user-online"){
           const subs = data.subscription as PushSubscription;
-          subscriptions.set(data.session?.user.internalId , subs);
+          if(subs) {
+            subscriptions.set(data.session?.user.internalId , subs);
+          } else if(subs === undefined) {
+            ws.send(JSON.stringify({ type: "push-error" , error: subs }))
+          }
           console.log(subscriptions);
           console.log("user online data",data);
           if(data.session === null) {
@@ -161,6 +166,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             type: "ONLINE_USERS",
             users: cleanedOnlineUsers
           }));
+        } else if(data.type === "push-error") {
+          ws.send(JSON.stringify({ type: "push-error" , error: data.error }))
         } else if(data.type === "friend-request") {
           console.log(data.to , data.from);
           const receiver = wsToUser.get(data.to);
@@ -178,6 +185,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
              console.log("Friend request created");
            } else {
              console.log("Friend request already exists");
+             return;
            }
            let senderNotification = await notification.findOneAndUpdate(
                {
@@ -247,8 +255,13 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           console.log("participents",participents);
           console.log("participents2",friendKey);
           let newConversation;
-          newConversation = await conversation.findOne({ friendKey });
-          if(!newConversation) {
+          if(friendKey) {
+            newConversation = await conversation.findOne({ friendKey });
+          }
+          else {
+            ws.send(JSON.stringify({ type:"try again!" }))
+          }
+          if(!newConversation && friendKey) {
             newConversation = await conversation.create({
               type: "direct",
               participents,
@@ -432,22 +445,23 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             });
             console.log("delivery status",deliveryStatus);
 
-            const exists = await Message.findOne({
-              clientMessageId: data.clientMessageId
-            })
-
-             if(exists) {
-               return;
-             }
-
-             let msg = await Message.create({
-                clientMessageId: data.clientMessageId,
-                conversationId: id,
-                senderId: data.senderId,
-                text: data.text,
-                receiversId,
-                deliveryStatus
-              })
+            const msg = await Message.findOneAndUpdate(
+               { clientMessageId: data.clientMessageId },
+               {
+                 $setOnInsert: {
+                   clientMessageId: data.clientMessageId,
+                   conversationId: id,
+                   senderId: data.senderId,
+                   text: data.text,
+                   receiversId,
+                   deliveryStatus
+                 }
+               },
+               {
+                 new: true,
+                 upsert: true
+               }
+             );
 
              await conversation.findByIdAndUpdate(
                 id,
@@ -472,8 +486,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                 if(webPushSubscription) {
                   await sendPushNotification(webPushSubscription, {
                     title: "New Message",
-                    body: "User A sent you a message",
-                    from: "userA",
+                    body: `${data.session?.user.name} sent you a message`,
+                    from: `${data.session?.user.name}`,
                     url: "/chat/userA",
                   })
                 }
@@ -523,7 +537,10 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             })
             if(areFriends.status === "accepted") {
               const convo = await conversation.findById(data.activeId);
-            let parts = convo.participents;
+              var parts;
+              if(convo) {
+                parts = convo.participents;
+              }
             const unReadMsg = await Message.find({
               conversationId: data.activeId,
               // [`deliveryStatus.${data.session.user.internalId}`]: "read"
@@ -638,7 +655,24 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           } catch(error) {
             console.log("error",error)
           }
-        }
+        } else if (
+      data.type === "call-offer" ||
+      data.type === "call-answer" ||
+      data.type === "call-ice" ||
+      data.type === "call-end"
+    ) {
+      const target = wsToUser.get(data.to);
+      if (!target) return;
+
+      ws.send(JSON.stringify({ type: "user-there" }));
+
+      target.send(
+        JSON.stringify({
+          ...data,
+          from: data.session?.user?.internalId
+        })
+      );
+    }
        })
     } catch(err) {
       console.log("error",err);

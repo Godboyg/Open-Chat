@@ -99,13 +99,28 @@ export const friendShip = async({ query }: any) => {
             status: "accepted"
         })
 
-        var convoId
+        if (friendShip.length === 0) {
+      return {
+        message: "No friendships found",
+        friendShip: [],
+        convoId: []
+      };
+    }
 
-        if(friendShip) {
-            convoId = await conversation.find({ 
-                participents: userId
-            })
-        }
+      
+        const friendIds = friendShip.map((f: any) =>
+      f.requester.toString() === userId
+        ? f.recipient
+        : f.requester
+    );
+
+    // 3. Find conversations between user and friends
+    const convoId = await conversation.find({
+      participents: {
+        $all: [userId],
+        $in: friendIds
+      }
+    });
 
         return { message: "status" , friendShip , convoId }
     } catch(Error) {

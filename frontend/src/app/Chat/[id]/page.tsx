@@ -16,6 +16,13 @@ import { formatLastActive } from '@/lib/LastActive';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
+import { subscribeToPush } from '@/lib/push';
+import peer from '@/webrtc/peer';
+import { getServerSession } from 'next-auth';
+import Call from '@/app/Components/Call';
+
+const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+type CallState = "idle" | "calling" | "ringing" | "connected";
 
 function Page() {
 
@@ -27,8 +34,15 @@ function Page() {
     const { data: session , status } = useSession();
     const [typing , setTyping] = useState<boolean>(false);
     const [notFriend , setNotFriend] = useState<boolean>(false);
+    const [call , setCall] = useState<boolean>(false);
     const params = useParams();
     const chatid = params.id as string;
+    const localVideoRef = useRef<HTMLVideoElement | MediaStream>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement | MediaStream>(null);
+    const [callState, setCallState] = useState<CallState>("idle");
+    const [incomingOffer, setIncomingOffer] =useState<RTCSessionDescriptionInit | null>(null);
+    const [callerId, setCallerId] = useState<string | null>(null);
+    const [user , setUser] = useState<boolean>(false);
 
     const mode = useAppSelector((state) => state.theme.mode);
     const messages = useAppSelector((state) =>
@@ -43,9 +57,9 @@ function Page() {
     console.log("messages",messages);
 
     useEffect(() => {
-        getSocket()
+        getSocket();
     
-        const unsubscribe = subscribe((data) => {
+        const unsubscribe = subscribe(async(data: any) => {
             console.log("data on msg page",data);
             if(data.type === "MISSED_MESSAGES"){
                 console.log("msg missed",data.msg);
@@ -71,6 +85,9 @@ function Page() {
                 }));
             } else if(data.type === "Typing") {
                 setTyping(true);
+                setTimeout(() => {
+                    setTyping(false)
+                },2000)
             } else if(data.type === "Typing-stop") {
                 setTyping(false);
             } else if(data.type === "ONLINE_USERS"){
@@ -82,9 +99,11 @@ function Page() {
             } else if(data.type === "msg-seen"){
                 console.log("seen", data.msg);
                 dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
+                setTyping(false)
             } else if(data.type === "now-seen"){
                 console.log("now seen just", data.unReadMsg)
                 dispatch(markMessagesRead({ conversationId: activeId, userId: data.senderId }))
+                setTyping(false)
             } else if(data.type === "unread-msg") {
                 console.log("un read msg",data.unReadMsg);
                 emit({ type: "now seen" , activeId , senderId: data.senderId})
@@ -103,11 +122,48 @@ function Page() {
             } else if(data.type === "cannot-msg-add") {
                 setNotFriend(true);
                 console.log("add first then u can msg");
-            }
-        })
+            } else if(data.type === "user-there") {
+                try{
+                    setUser(true)
+                } catch(error) {
+                    console.log("error",error)
+                }
+            } else if (data.type === "call-offer") {
+                console.log("inco,mming,call",data.from);
+                setCall(true);
+                // alert("incomming call,");
+        setCallerId(data.from!);
+        setIncomingOffer(data.offer);
+        setCallState("ringing");
+      }
+
+      else if (data.type === "call-answer") {
+                console.log("inco,mming,call,answer");
+        await peer.setRemoteAnswer(data.answer);
+        setCallState("connected");
+      }
+
+      else if (data.type === "call-ice") {
+        peer.addIce(data.candidate);
+      }
+
+      else if (data.type === "call-end") {
+        endCall();
+        setCall(false);
+      }
+        }) 
 
         return () => unsubscribe()
     },[])
+
+    useEffect(() => {
+        const fn = async() => {
+            let subscription = await subscribeToPush(key ? key : "");
+            emit({ type:"user-online", session , subscription });
+        }
+
+        fn();
+    },[status])
 
     useEffect(() => {
         emit({ type: "msg read" , activeId , session });
@@ -191,6 +247,94 @@ function Page() {
       loadMessages();
     }, [activeId]);
 
+    const startCall = async () => {
+    setCallState("calling");
+    setCall(true);
+
+    peer.createPeer();
+
+    const stream = await peer.getMedia();
+    peer.addTracks();
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    peer.onIce(candidate => {
+      emit({
+        type: "call-ice",
+        to: otherUser.otherUser?.uniqueUserId,
+        candidate,
+        session
+      });
+    });
+
+    peer.onRemoteStream(stream => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+    });
+
+    const offer = await peer.createOffer();
+
+    emit({
+      type: "call-offer",
+      to: otherUser.otherUser?.uniqueUserId,
+      offer,
+      session
+    });
+  };
+
+  const acceptCall = async () => {
+    if (!incomingOffer || !callerId) return;
+
+    setCallState("connected");
+
+    peer.createPeer();
+
+    const stream = await peer.getMedia();
+    peer.addTracks();
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    peer.onIce(candidate => {
+      emit({
+        type: "call-ice",
+        to: callerId,
+        candidate,
+        session
+      });
+    });
+
+    peer.onRemoteStream(stream => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+    });
+
+    const answer = await peer.createAnswer(incomingOffer);
+
+    emit({
+      type: "call-answer",
+      to: callerId,
+      answer,
+      session
+    });
+  };
+
+
+  const endCall = () => {
+    peer.close();
+    setCallState("idle");
+    setCall(false);
+
+    if (callerId) {
+      emit({ type: "call-end", to: callerId , session });
+    }
+  };
+
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         try{
             setMsg(e.target.value)
@@ -229,18 +373,23 @@ function Page() {
    console.log("seenuser",seenUserIds)
   return (
     <div className={`w-full h-screen flex items-center justify-center ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
+        {
+            call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
+            user={user}/>
+        }
         <div className="h-full lg:w-[60%] w-[95%] flex flex-col gap-1">
             <div className="p-2">
                 <div className="">
                     {
                         otherUser && 
-                        <div className="flex items-center w-full gap-2">
-                            <div className="relative">
+                        <div className="flex items-center justify-between w-full gap-2">
+                            <div className="flex items-center w-full gap-2">
+                                <div className="relative">
                               <Image 
                                src={otherUser.otherUser?.image ? otherUser.otherUser.image : ""}
                                alt='User'
-                               height={35}
-                               width={35}
+                               height={40}
+                               width={40}
                                className='rounded-full object-cover hover:cursor-pointer'
                                />
                                <div className="absolute bottom-0 right-0">
@@ -250,15 +399,19 @@ function Page() {
                                     </div>
                                  }
                                </div>
-                             </div>
-                             <div className="relative w-full">
+                               </div>
+                               <div className="relative w-full">
                                 <p className='hover:cursor-pointer mb-3'>{otherUser.otherUser?.fullName}</p>
                                 {
                                     !allOnlineUsers.includes(otherUser?.otherUser?.uniqueUserId ? otherUser.otherUser.uniqueUserId : "") ?
                                     <small className='text-xs absolute top-5 w-full text-gray-500'>{formatLastActive(otherUser?.otherUser?.lastActive ? otherUser.otherUser.lastActive : "")}</small>
                                     : <small className='text-xs absolute top-5 w-full text-gray-500'>Online</small>
                                 }
-                             </div>
+                               </div>
+                            </div>
+                            <div className="hover:cursor-pointer">
+                                <button onClick={startCall}>📞</button>
+                            </div>
                         </div>
                     }
                 </div>

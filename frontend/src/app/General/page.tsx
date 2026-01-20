@@ -23,6 +23,9 @@ import { setActiveConversation, setConversations, updateLastMessage, upsertConve
 import { addNotification } from '@/redux/notificationSlice';
 import { addMessage } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
+import { subscribeToPush } from '@/lib/push';
+
+const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 type User = {
     name: string | null | undefined,
@@ -124,14 +127,25 @@ function Page() {
     const [currentProfile , setCurrentProfile] = useState<message | null >(null)
 
     useEffect(() => {
-        if(status === "authenticated"){
-            console.log("authenticated", session);
+        const fn = async() => {
+            try{
+                let subscription = await subscribeToPush(key ? key : "");
+                  if(status === "authenticated"){
+                      console.log("authenticated", session);
+                      console.log("subs",subscription);
+                      emit({ type:"user-online", session , subscription });
+                  }
+                  else if(status === "unauthenticated"){
+                      router.push("/");
+                  } else {
+                      console.log("loading...");
+                  }
+            } catch(err) {
+                toast.error(`pls refresh! ${err}`);
+            }
         }
-        else if(status === "unauthenticated"){
-            router.push("/");
-        } else {
-            console.log("loading...");
-        }
+
+        fn();
     },[status])
 
     useEffect(() => {
@@ -268,7 +282,7 @@ function Page() {
     useEffect(() => {
         getSocket()
         
-        const unsubscribe = subscribe((data) => {
+        const unsubscribe = subscribe((data: any) => {
             console.log("data on message",data);
             if(data.isActive){
                 console.log("datasda",data);
@@ -277,6 +291,8 @@ function Page() {
                 //     if(exists) return prev;
                 //     return [...prev , data];
                 // })
+            } else if(data.type === "push-error") {
+                toast.error("registor-error",data.error)
             }
             else if(data.type === "thought"){
                 setMessages((prev) => [...prev, data]);
@@ -406,6 +422,7 @@ function Page() {
                    text: data.message.text
                 }))
             } else if(data.type === "message received"){
+               setTyping(false);
                console.log("new message", data.msg);
                setPMsg((prev) => [...prev, data.msg]);
                dispatch(updateLastMessage({
@@ -417,8 +434,10 @@ function Page() {
                    }
                 }));
             } else if(data.type === "Typing") {
-                setTyping(true);
-                setConvo(data.convo);
+                if(data.convo){
+                   setTyping(true);
+                   setConvo(data.convo);
+                }
             } else if(data.type === "Typing-stop") {
                 setTyping(false);
             } else if(data.type === "Typing-g") {
@@ -456,6 +475,8 @@ function Page() {
                     to: data.to,
                     status: "pending"
                   }))
+            } else if(data.type === "session-missing") {
+                toast.error("session mission login again!");
             }
         })
 
@@ -1262,8 +1283,8 @@ function Page() {
                                                                         </div>
                                                                         <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
-                                                                            typing ? (
-                                                                                conve === convo.convo._id && <small className='italic absolute top-4.5'>Typing.....</small>
+                                                                            conve === convo.convo._id && typing ? (
+                                                                                 <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
                                                                               convo.convo.lastMessage?.senderId !== session?.user?.internalId 

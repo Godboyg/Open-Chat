@@ -9,6 +9,11 @@ const conversationSchema = new mongoose.Schema({
     participents: [{
         type: String
     }],
+    friendKey: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     lastMessage: {
         text: {
             type: String

@@ -11,6 +11,9 @@ import { formatMessageDateHeader } from '@/lib/dateHeader';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
 import { upsertConversation } from '@/redux/conversationSlice';
 import { motion } from "motion/react";
+import { subscribeToPush } from '@/lib/push';
+
+const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 function Page() {
 
@@ -25,6 +28,7 @@ function Page() {
     console.log("all friends",friends);
     console.log("all requests",requests);
     const [loading , setLoading] = useState<boolean>(true)
+    const [isLoading , setisLoading] = useState<boolean>(false);
     function convertToISTTime(utcISOString: any) {
   return new Date(utcISOString)
     .toLocaleTimeString("en-IN", {
@@ -39,7 +43,7 @@ function Page() {
     useEffect(() =>{
         getSocket();
 
-        const unsubscribe = subscribe((data) => {
+        const unsubscribe = subscribe((data: any) => {
             console.log("data on message on notification page",data);
             if(data.type === "user-unfrnd"){
                 setLoading(false);
@@ -86,11 +90,20 @@ function Page() {
     },[])
 
     useEffect(() => {
-        emit({ type:"user-online", session });
-        emit({ type:"mark-n", session });
-        if(session?.user.internalId) {
-           dispatch(markAllRead(session?.user?.internalId));
+        const fn = async() => {
+          try{
+            let subscription = await subscribeToPush(key ? key : "");
+            emit({ type:"user-online", session , subscription });
+            emit({ type:"mark-n", session });
+            if(session?.user.internalId) {
+              dispatch(markAllRead(session?.user?.internalId));
+            } 
+          } catch(err) {
+            toast.error("pls refresh!");
+          }
         }
+
+        fn();
     },[status])
 
     useEffect(() => {
@@ -165,7 +178,7 @@ function Page() {
 
     const handleAccept = (val: NotificationN) => {
         try {
-           setLoading(true);
+           setisLoading(true);
             emit({ 
                 type:"friend-request-accepted",
                 to: val._id , from: val.otherUser?.uniqueId
@@ -183,7 +196,8 @@ function Page() {
             <div className="">
                 <h2 className='font-bold text-xl'>Notifications</h2>
             </div>
-            {
+            <div className="h-[90%] overflow-auto flex flex-col">
+              {
                 !loading && notification.length > 0 ? (
                     notification.map((notify, index) => {
 
@@ -199,7 +213,8 @@ function Page() {
 
                         return (
                             <>
-                            <div className=""
+                            <div className="px-1">
+                              <div className=""
                             key={index}>
                                 {showDateDivider && (
                                    <div className="flex justify-start my-3">
@@ -210,12 +225,13 @@ function Page() {
                                  )}
                             </div>
                             <div className="inline-flex items-center gap-4 rounded-lg w-full" key={index}>
-                                <div className="">
+                                <div className="flex items-center w-full">
+                                  <div className="">
                                     <Image 
                                       src={notify.otherUser?.image ? notify.otherUser.image : ""}
                                       alt='User'
-                                      height={45}
-                                      width={45}
+                                      height={40}
+                                      width={40}
                                       className='object-cover rounded-full'
                                     />
                                 </div>
@@ -242,6 +258,7 @@ function Page() {
   ) : null
 }
                                  </div>
+                                </div>
                                    <div className="bg-blue-500 rounded-md">
                                        {
   friends.some(
@@ -269,7 +286,7 @@ function Page() {
       onClick={() => handleAccept(notify)}
     >
       {
-        loading ? (
+        isLoading ? (
           <div className="w-3 h-3 border-3 border-gray-700 border-t-cyan-500 rounded-full animate-spin"></div>
         ) : (
           <span>Accept</span>
@@ -283,7 +300,8 @@ function Page() {
   ) : null
 }
                                    </div>
-                               </div>
+                            </div>
+                            </div>
                             </>
                         )
                     })
@@ -314,6 +332,7 @@ function Page() {
                     </div>
                 )
             }
+            </div>
         </div>
     </div>
   )

@@ -131,6 +131,10 @@ function Page() {
   };
 
   const handleOnClick = () => {
+    if(!session) {
+      toast.error("try again!"); 
+      return;
+    }
     router.push("/General")
     setTimeout(() => {
       if(status && status === "authenticated"){
