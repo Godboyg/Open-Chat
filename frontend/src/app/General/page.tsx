@@ -812,6 +812,22 @@ function Page() {
                          placeholder='Write your mind...'
                          className={`px-3 py-4 w-full text-white rounded-lg border-none outline-none shadow-[0_0_15px_4px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]`}
                         />
+                        {replyTo && (
+                      <div className={`p-2 absolute z-9 -top-10 border-l-4 ${mode === "light" ? "bg-white" : "bg-black"} border-blue-500 mb-2`}>
+                        <span className={`text-sm ${mode === "light" ? "text-black" : "text-white"}`}>
+                          Replying to: {replyTo.msg}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setReplyTo(null)
+                            setAns("")
+                        }}
+                          className="ml-2 hover:cursor-pointer text-red-500 text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                     </div>
                     <div className="">
                         {/* <Picker
@@ -1029,22 +1045,6 @@ function Page() {
                             </div>
                         )
                      }
-                     {replyTo && (
-                      <div className={`p-2 fixed bottom-20 border-l-4 ${mode === "light" ? "bg-white" : "bg-black"} border-blue-500 mb-2`}>
-                        <span className={`text-sm ${mode === "light" ? "text-black" : "text-white"}`}>
-                          Replying to: {replyTo.msg}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setReplyTo(null)
-                            setAns("")
-                        }}
-                          className="ml-2 hover:cursor-pointer text-red-500 text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
                 </div>           
             </div>
         </div>

@@ -14,29 +14,62 @@ export function getSocket(): WebSocket {
     socket = new WebSocket("ws://localhost:9200");
     // socket = new WebSocket("wss://open-chat-v9i4.onrender.com/ws");
 
+    // socket.onopen = async () => {
+    //   try {
+    //     console.log("✅ Connected to WebSocket server");
+
+    //     const session = await getSession();
+
+    //     const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    //     let subscription: PushSubscription | null = null;
+
+    //     if (key) {
+    //       subscription = await subscribeToPush(key);
+    //     }
+
+    //     emit({
+    //       type: "user-online",
+    //       session,
+    //       subscription
+    //     });
+    //   } catch (error) {
+    //     console.error("❌ WebSocket auth error", error);
+    //     emit({ type: "push-error" , error})
+    //   }
+    // };
+
     socket.onopen = async () => {
-      try {
-        console.log("✅ Connected to WebSocket server");
+  console.log("✅ Connected to WebSocket server");
 
-        const session = await getSession();
+  let session = null;
+  let subscription: PushSubscription | null = null;
 
-        const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        let subscription: PushSubscription | undefined;
+  try {
+    session = await getSession();
+  } catch (err) {
+    console.error("❌ Failed to get session", err);
+  }
 
-        if (key) {
-          subscription = await subscribeToPush(key);
-        }
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-        emit({
-          type: "user-online",
-          session,
-          subscription
-        });
-      } catch (error) {
-        console.error("❌ WebSocket auth error", error);
-        emit({ type: "push-error" , error})
-      }
-    };
+  if (key && "serviceWorker" in navigator && "PushManager" in window) {
+    try {
+      subscription = await subscribeToPush(key);
+    } catch (err) {
+      // 🔕 Push is optional – Brave often fails here
+      console.warn("⚠️ Push subscription failed (continuing without push)", err);
+    }
+  } else {
+    console.warn("⚠️ Push not supported or VAPID key missing");
+  }
+
+  // 🚀 ALWAYS emit user-online
+  emit({
+    type: "user-online",
+    session,
+    subscription, // null if unavailable
+  });
+};
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);

@@ -92,8 +92,8 @@ function Page() {
     useEffect(() => {
         const fn = async() => {
           try{
-            let subscription = await subscribeToPush(key ? key : "");
-            emit({ type:"user-online", session , subscription });
+            // let subscription = await subscribeToPush(key ? key : "");
+            emit({ type:"user-online", session });
             emit({ type:"mark-n", session });
             if(session?.user.internalId) {
               dispatch(markAllRead(session?.user?.internalId));
@@ -170,6 +170,7 @@ function Page() {
 
     const handleUnFrnd = (fnd: Friend) => {
         try{
+            console.log("frnd",fnd);
             emit({ type:"unFrnd" , session , fnd });
         } catch(error) {
             console.log("error",error);
@@ -196,7 +197,7 @@ function Page() {
             <div className="">
                 <h2 className='font-bold text-xl'>Notifications</h2>
             </div>
-            <div className="h-[90%] overflow-auto flex flex-col">
+            <div className="h-[90%] overflow-auto flex flex-col gap-2">
               {
                 !loading && notification.length > 0 ? (
                     notification.map((notify, index) => {

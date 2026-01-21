@@ -36,9 +36,10 @@ function Page() {
     const [notFriend , setNotFriend] = useState<boolean>(false);
     const [call , setCall] = useState<boolean>(false);
     const params = useParams();
+    const [stream, setStream] = useState<MediaStream | null>(null);
     const chatid = params.id as string;
-    const localVideoRef = useRef<HTMLVideoElement | MediaStream>(null);
-    const remoteVideoRef = useRef<HTMLVideoElement | MediaStream>(null);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const [callState, setCallState] = useState<CallState>("idle");
     const [incomingOffer, setIncomingOffer] =useState<RTCSessionDescriptionInit | null>(null);
     const [callerId, setCallerId] = useState<string | null>(null);
@@ -132,25 +133,22 @@ function Page() {
                 console.log("inco,mming,call",data.from);
                 setCall(true);
                 // alert("incomming call,");
-        setCallerId(data.from!);
-        setIncomingOffer(data.offer);
-        setCallState("ringing");
-      }
-
-      else if (data.type === "call-answer") {
+                setCallerId(data.from!);
+                setIncomingOffer(data.offer);
+                setCallState("ringing");
+            } else if (data.type === "call-answer") {
                 console.log("inco,mming,call,answer");
-        await peer.setRemoteAnswer(data.answer);
-        setCallState("connected");
-      }
-
-      else if (data.type === "call-ice") {
-        peer.addIce(data.candidate);
-      }
-
-      else if (data.type === "call-end") {
-        endCall();
-        setCall(false);
-      }
+                await peer.setRemoteAnswer(data.answer);
+                setCallState("connected");
+            }
+            else if (data.type === "call-ice") {
+              peer.addIce(data.candidate);
+            }
+            else if (data.type === "call-end") {
+              endCall();
+              setCallerId("");
+              setCall(false);
+            }
         }) 
 
         return () => unsubscribe()
@@ -250,12 +248,15 @@ function Page() {
     const startCall = async () => {
     setCallState("calling");
     setCall(true);
+    setCallerId(session?.user.internalId ? session.user.internalId : "");
 
     peer.createPeer();
 
     const stream = await peer.getMedia();
     peer.addTracks();
+    stream.getVideoTracks().forEach(t => (t.enabled = false));
 
+    setStream(stream);
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
@@ -329,6 +330,7 @@ function Page() {
     peer.close();
     setCallState("idle");
     setCall(false);
+    setCallerId("");
 
     if (callerId) {
       emit({ type: "call-end", to: callerId , session });
@@ -375,7 +377,7 @@ function Page() {
     <div className={`w-full h-screen flex items-center justify-center ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
         {
             call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
-            user={user}/>
+            user={user} stream={stream} caller={callerId} session={session}/>
         }
         <div className="h-full lg:w-[60%] w-[95%] flex flex-col gap-1">
             <div className="p-2">

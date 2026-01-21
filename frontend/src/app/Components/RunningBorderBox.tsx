@@ -24,7 +24,7 @@ const RunningBorderBox = ({ clicked } : props) => {
           setClick(false)
         },2000)
       } 
-      else {
+      else if(status === "unauthenticated") {
         setClick(true)
         clicked(true)
         signIn("google")

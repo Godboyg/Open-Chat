@@ -260,6 +260,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           }
           else {
             ws.send(JSON.stringify({ type:"try again!" }))
+            return;
           }
           if(!newConversation && friendKey) {
             newConversation = await conversation.create({
@@ -343,13 +344,23 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               status: "accepted"
             }))
           } else {
-            await notification.create({
+            await notification.findOneAndUpdate({
+              userId: data.from,
+              to: data.to,
+              message: "friend by the user",
+              conversationId: newConversation?._id,
+            }, {
+              $setOnInsert: {
               userId: data.from,
               to: data.to,
               type: "STATE_CHANGE",
               message: "friend by the user",
               conversationId: newConversation?._id,
               isRead: false
+            }
+            },{
+              new: true,
+              upsert: true
             })
           }
           if(to) {
@@ -391,12 +402,21 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                to: data.session.user.internalId
             }))
           } else {
-            await notification.create({
+            await notification.findOneAndUpdate({
+              userId: data.fnd._id,
+              to: data.session.user.internalId,
+              type: "unfriend by the user",
+            }, {
+              $setOnInsert: {
               userId: data.fnd._id,
               to: data.session.user.internalId,
               type: "STATE_CHANGE",
               message: "unfriend by the user",
               isRead: false
+            }
+            }, {
+              new: true,
+              upsert: true
             })
           }
           if(to) {
@@ -405,17 +425,27 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               to: data.fnd._id
             }))
           } else {
-            await notification.create({
-              userId: data.session.user.internalId,
-              to: data.fnd._id,
-              type: "STATE_CHANGE",
-              message: "unfriended",
-              isRead: false
-            })
+            await notification.findOneAndUpdate(
+              {
+               userId: data.session.user.internalId,
+               to: data.fnd._id,
+               message: "unfriended",
+              },{
+                $setOnInsert: {
+                 userId: data.session.user.internalId,
+                 to: data.fnd._id,
+                 type: "STATE_CHANGE",
+                 message: "unfriended",
+                 isRead: false
+                }
+              },{
+                new: true,
+                upsert: true
+              })
           }
         } else if(data.type === "done") {
           await notification.findOneAndDelete({
-            userId: data.session.user.internalId,
+            userId: data.session?.user?.internalId,
             message: "unfriend by the user"
           })
         } else if(data.type === "message sent"){
@@ -596,6 +626,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           }
         } else if(data.type === "mark-n") {
           try{
+            console.log("marlkedd");
             await notification.updateMany(
               {
                 userId: data.session?.user?.internalId,

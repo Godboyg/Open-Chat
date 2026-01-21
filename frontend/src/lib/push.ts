@@ -1,3 +1,5 @@
+import { ErrorIcon } from "react-hot-toast";
+
 export function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
@@ -18,10 +20,14 @@ export function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
 export async function subscribeToPush(
   vapidPublicKey: string
 ): Promise<PushSubscription> {
-  const registration = await navigator.serviceWorker.ready;
+  try{
+    const registration = await navigator.serviceWorker.ready;
 
-  return await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToArrayBuffer(vapidPublicKey),
-  });
+    return await registration.pushManager.subscribe({
+     userVisibleOnly: true,
+     applicationServerKey: urlBase64ToArrayBuffer(vapidPublicKey),
+    });
+  } catch(error) {
+    throw new Error
+  }
 }
