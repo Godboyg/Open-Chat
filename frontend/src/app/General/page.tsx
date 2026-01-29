@@ -842,7 +842,7 @@ function Page() {
         peer.addTracks();
         stream.getVideoTracks().forEach(t => (t.enabled = false));
     
-        setStream(stream);
+        // setStream(stream);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
@@ -858,7 +858,7 @@ function Page() {
     
         peer.onRemoteStream(stream => {
           if (remoteVideoRef.current) {
-            setRemoteStream(stream);
+            // setRemoteStream(stream);
             remoteVideoRef.current.srcObject = stream;
           }
         });
