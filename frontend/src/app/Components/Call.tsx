@@ -56,10 +56,10 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
 
     useEffect(() => {
         if(videoRef.current) {
-            videoRef.current.srcObject = stream;
+            videoRef.current.srcObject = localVideo;
         }
         if(videoRemoteRef.current) {
-            videoRemoteRef.current.srcObject = remoteStream;
+            videoRemoteRef.current.srcObject = remoteVideo;
         }
     },[stream , shink , small])
 
