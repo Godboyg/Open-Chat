@@ -34,7 +34,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
 
     const controls = useAnimation();
 
-    console.log("shift!!1",shift);
+    console.log("shift!!1",shift, stream , remoteStream);
     const [shink , setShink] = useState(false);
     const [small , setSmall] = useState(false);
 
@@ -56,10 +56,10 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
 
     useEffect(() => {
         if(videoRef.current) {
-            videoRef.current.srcObject = localVideo;
+            videoRef.current.srcObject = stream;
         }
         if(videoRemoteRef.current) {
-            videoRemoteRef.current.srcObject = remoteVideo;
+            videoRemoteRef.current.srcObject = remoteStream;
         }
     },[stream , shink , small])
 
