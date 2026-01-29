@@ -118,7 +118,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                                               {
                                                 cameraOn ? (
                                                     <div className="">
-                                                        <video ref={videoRef} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
+                                                        <video ref={localVideo} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
                                                     </div>
                                                 ) : (
                                                     <Image 
@@ -150,7 +150,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                                               {
                                                 cameraOn ? (
                                                     <div className="">
-                                                        <video ref={videoRef} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
+                                                        <video ref={localVideo} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
                                                     </div>
                                                 ) : (
                                                     <Image 
@@ -182,7 +182,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                                         {
                                             callState === "connected" && <div className={`rounded-xl bg-black/50 flex items-center justify-center absolute top-5 z-999 right-0
                                             ${remote ? "block" : "hidden"}`}>
-                                                <video ref={videoRemoteRef} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
+                                                <video ref={remoteVideo} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
                                             </div>
                                         }
                            
@@ -270,7 +270,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                             {
                                 callState === "connected" && <div className={`rounded-xl bg-black/50 flex items-center justify-center absolute top-5 z-999 right-0
                                 ${remote ? "block" : "hidden"}`} >
-                                    <video ref={videoRemoteRef} autoPlay playsInline className="w-40 h-60 rounded-lg object-cover"/>
+                                    <video ref={remoteVideo} autoPlay playsInline className="w-40 h-60 rounded-lg object-cover"/>
                                </div>
                             }
                            
@@ -318,7 +318,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                                     </div>
                               )}
                               <div className={`h-screen w-full ${shink ? "hidden" : "block"}`}>
-                                <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-lg object-cover"/>
+                                <video ref={localVideo} autoPlay playsInline className="w-full h-full rounded-lg object-cover"/>
                               </div>
                             {
                                callState === "calling" && ( 
