@@ -34,7 +34,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
 
     const controls = useAnimation();
 
-    console.log("shift!!1",shift, stream , remoteStream);
+    console.log("shift!!1",shift, stream , remoteStream , localVideo , remoteVideo);
     const [shink , setShink] = useState(false);
     const [small , setSmall] = useState(false);
 
