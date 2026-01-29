@@ -918,7 +918,7 @@ function Page() {
                     ) : (
                         conversations.length > 0 && (
                          hasMessage ? (
-                          <div className="relative bg-green-500">
+                          <div className="relative">
                             <i className="ri-send-plane-line text-sm"></i>
                             <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
                             </div>
