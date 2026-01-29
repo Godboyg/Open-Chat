@@ -182,7 +182,7 @@ function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , ot
                                         {
                                             callState === "connected" && <div className={`rounded-xl bg-black/50 flex items-center justify-center absolute top-5 z-999 right-0
                                             ${remote ? "block" : "hidden"}`}>
-                                                <video ref={videoRemoteRe} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
+                                                <video ref={videoRemoteRef} autoPlay playsInline className="w-10 h-10 rounded-lg object-cover"/>
                                             </div>
                                         }
                            
