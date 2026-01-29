@@ -31,7 +31,7 @@ const handler = NextAuth({
   callbacks: {
       async signIn({ user }) {
         try {
-        const res = await axios.post("/api/app/user/create",
+        const res = await axios.post("https://open-chat-v9i4.onrender.com/user/create",
           { 
             email: user.email,
             image: user.image
