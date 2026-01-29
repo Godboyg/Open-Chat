@@ -1,16 +1,16 @@
 "use client"
-import React, {  useEffect, useRef, useState } from 'react'
+import React, {  useCallback, useEffect, useRef, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import 'remixicon/fonts/remixicon.css'
 import { getSocket, subscribe , emit } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
-import { addMessage, markMessagesRead, setMessages } from '@/redux/messageSlice';
+import { addMessage, markMessagesRead, removeMessage, setMessages, updateMessage } from '@/redux/messageSlice';
 import { updateLastMessage } from '@/redux/conversationSlice';
 import { Suspense } from "react";
 import axios from 'axios';
 import Image from 'next/image';
 import Typing from './Typing';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion, number } from 'motion/react';
 import { setUserOnline } from '@/redux/themeSlice';
 import { formatLastActive } from '@/lib/LastActive';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
@@ -18,8 +18,9 @@ import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
 import { subscribeToPush } from '@/lib/push';
 import peer from '@/webrtc/peer';
-import { getServerSession } from 'next-auth';
 import Call from '@/app/Components/Call';
+import Delete from '@/app/Components/Delete';
+import { Toaster } from 'react-hot-toast';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 type CallState = "idle" | "calling" | "ringing" | "connected";
@@ -37,13 +38,22 @@ function Page() {
     const [call , setCall] = useState<boolean>(false);
     const params = useParams();
     const [stream, setStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const chatid = params.id as string;
+    console.log("chat id",chatid);
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const [callState, setCallState] = useState<CallState>("idle");
     const [incomingOffer, setIncomingOffer] =useState<RTCSessionDescriptionInit | null>(null);
     const [callerId, setCallerId] = useState<string | null>(null);
     const [user , setUser] = useState<boolean>(false);
+    const [remoteVideoOn, setRemoteVideoOn] = useState(false);
+    const [cameraOn, setCameraOn] = useState(false);
+    const [micOn, setMicOn] = useState(true);
+    const [replyTo , setReplyTo] = useState<any>("");
+    const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const [deleteMsg , setDeleteMsg] = useState<any>("");
+    const [edit , setEdit] = useState<any>("");
 
     const mode = useAppSelector((state) => state.theme.mode);
     const messages = useAppSelector((state) =>
@@ -64,24 +74,44 @@ function Page() {
             console.log("data on msg page",data);
             if(data.type === "MISSED_MESSAGES"){
                 console.log("msg missed",data.msg);
-            } else if(data.type === "message received"){
-                emit({ type: "seen" , activeId , session , msg: data.msg })
+            } else if(data.type === "edited") {
+              console.log("data edit",data);
+              dispatch(updateMessage({
+                conversation: data.conversation,
+                msgId: data.msgId,
+                msg: data.msg
+              }))
+            } else if(data.type === "deleted") {
+              setDeleteMsg("");
+              console.log("deketeddd");
+              toast.success("msg deleted!!");
+            } else if(data.type === "reply-not-found") {
+              toast.error("reply not found!!");
+            }
+             else if(data.type === "message received"){
+                emit({ type: "seen" , activeId: activeId || chatid , session , msg: data.msg })
                 console.log("in the page/room");
-                console.log("msg", data.msg);
+                console.log("msg", data);
                 dispatch(addMessage({
                  _id: crypto.randomUUID(),
                  conversationId: data.msg.conversationId,
                  senderId: data.msg.senderId,
                  text: data.msg.text,
                  createdAt: data.msg.createdAt,
-                 status: "sent" 
+                 status: "sent",
+                 reply: {
+                  clientId: data.reply?.clientId,
+                  senderId: data.reply?.senderId,
+                  text: data.reply?.text,
+                  name: data.reply?.name
+                }
                 }));
                 dispatch(updateLastMessage({
                   conversationId: data.msg.conversationId,
                   lastMessage: {
                       text: data.msg.text,
                       senderId: data.msg.senderId,
-                      createdAt: data.msg.createdAt
+                      createdId: data.msg.createdAt
                   }
                 }));
             } else if(data.type === "Typing") {
@@ -103,14 +133,14 @@ function Page() {
                 setTyping(false)
             } else if(data.type === "now-seen"){
                 console.log("now seen just", data.unReadMsg)
-                dispatch(markMessagesRead({ conversationId: activeId, userId: data.senderId }))
+                dispatch(markMessagesRead({ conversationId: activeId || chatid, userId: data.senderId }))
                 setTyping(false)
             } else if(data.type === "unread-msg") {
                 console.log("un read msg",data.unReadMsg);
-                emit({ type: "now seen" , activeId , senderId: data.senderId})
+                emit({ type: "now seen" , activeId: activeId || chatid , senderId: data.senderId})
                 if(data.unReadMsg.length > 0){
                     dispatch(setMessages({
-                     conversationId: activeId ? activeId : "",
+                     conversationId: activeId ? activeId : chatid,
                      messages: data.unReadMsg,
                     }))
                 }
@@ -137,9 +167,10 @@ function Page() {
                 setIncomingOffer(data.offer);
                 setCallState("ringing");
             } else if (data.type === "call-answer") {
+                setCallState("connected");
+                console.log("callState!!",callState);
                 console.log("inco,mming,call,answer");
                 await peer.setRemoteAnswer(data.answer);
-                setCallState("connected");
             }
             else if (data.type === "call-ice") {
               peer.addIce(data.candidate);
@@ -148,11 +179,38 @@ function Page() {
               endCall();
               setCallerId("");
               setCall(false);
+            } else if (data.type === "video-state") {
+              setRemoteVideoOn(data.enabled);
+            } else if(data.type === "delete-msg") {
+              dispatch(removeMessage({ 
+                conversation: data.del.conversationId,
+                id: data.del._id || data.del.clientMessageId
+              }))
+            } else if(data.type === "error-edit") {
+              // toast.error("error while editing!!");
+              console.log("error");
             }
         }) 
 
         return () => unsubscribe()
     },[])
+
+    const toggleCamera = () => {
+        const next = !cameraOn;
+         peer.toggleCamera(!cameraOn);
+         setCameraOn(prev => !prev);
+               emit({
+           type: "video-state",
+                  enabled: next,
+           to: otherUser.otherUser?.uniqueUserId,
+                   session
+         })
+       };
+
+    const toggleMic = () => {
+      peer.toggleMic(!micOn);
+      setMicOn(prev => !prev);
+    };
 
     useEffect(() => {
         const fn = async() => {
@@ -164,48 +222,75 @@ function Page() {
     },[status])
 
     useEffect(() => {
-        emit({ type: "msg read" , activeId , session });
+        emit({ type: "msg read" , activeId: activeId || chatid , session });
     },[messages])
 
     useEffect(() => {
         emit({ type:"user-online", session });
-        emit({ type: "msg read" , activeId , session });
-        emit({ type: "msg read online" , activeId , session });
+        emit({ type: "msg read" , activeId: activeId || chatid , session });
+        emit({ type: "msg read online" , activeId: activeId || chatid , session });
     },[status])
+
+    console.log("reply to",replyTo);
 
     const handleSendMsg = () => {
         try{
-            const now = new Date();
+            if(edit) {
+              console.log("eddited", activeId || chatid , edit.clientMessageId || edit._id , msg);
+              dispatch(updateMessage({ 
+                conversation: activeId || chatid , 
+                msgId: edit.clientMessageId || edit._id, 
+                msg: msg 
+              }))
+              emit({ type: "edited" , edit , msg , activeId: activeId || chatid
+                , msgId: edit.clientMessageId || edit._id, 
+               });
+              setEdit("");
+              setMsg("");
+            } else {
+              setEdit("");
+              const now = new Date();
+            let clientId = crypto.randomUUID();
             const message = {
-                clientMessageId: crypto.randomUUID(),
+                clientMessageId: clientId,
                 text: msg,
-                activeId: activeId,
+                activeId: activeId || chatid,
                 type: "message sent",
                 timeStamp: now.getTime(),
                 senderId: session?.user.internalId,
+                name: session?.user.name,
+                reply: replyTo
             }
 
-            if(activeId){
+            if(activeId || chatid){
                 dispatch(addMessage({
-                 _id: crypto.randomUUID(),
-                 conversationId: activeId,
+                 _id: clientId,
+                 conversationId: activeId || chatid,
                  senderId: session?.user.internalId,
                  text: msg,
-                 createdAt: Date.now()
+                 createdAt: Date.now(),
+                 reply: {
+                  clientId: replyTo?.clientMessageId,
+                  senderId: replyTo?.senderId,
+                  text: replyTo?.text,
+                  name: replyTo?.senderId === session?.user.internalId ? session?.user.name : otherUser.otherUser?.fullName
+                 }
                 }));
 
                 dispatch(updateLastMessage({
-                    conversationId: activeId,
+                    conversationId: activeId || chatid,
                     lastMessage: {
                         text: msg,
                         senderId: session?.user.internalId,
-                        date: Date.now()
+                        createdId: Date.now()
                     }
                 }))
             }
             emit(message);
             setMsg("");
-            emit({ type:"Typing-stop" , activeId , session})
+            setReplyTo("");
+            emit({ type:"Typing-stop" , activeId: activeId || chatid , session})
+            }
         } catch(error) {
             console.log("error",error);
         }
@@ -218,25 +303,25 @@ function Page() {
    }, [messages]);
 
     useEffect(() => {
-        emit({ type: "Typing" , activeId , session });
+        emit({ type: "Typing" , activeId: activeId || chatid , session });
     },[msg])
 
     useEffect(() => {
-     if (!activeId) return;
+    //  if (!activeId || !chatid) return;
 
      const loadMessages = async () => {
        const res = await axios.get("/api/app/message",{
            params: {
-               activeId
+               activeId: activeId || chatid
            }
        })
        console.log("called");
 
        const messages = res.data.messages;
-       console.log(messages);
+       console.log("all msgsg",messages);
         dispatch(
            setMessages({
-            conversationId: activeId,
+            conversationId: activeId || chatid,
             messages,
            })
         );
@@ -244,6 +329,18 @@ function Page() {
 
       loadMessages();
     }, [activeId]);
+
+    // useEffect(() => {
+    //     const timer =  setTimeout(() => {
+    //         if(callState !== "connected") {
+    //            setCall(false);
+    //            setCallState("idle");
+    //            toast.error("not answering");
+    //         }
+    //     },10000)
+
+    //     return () => clearTimeout(timer)
+    // },[callState])
 
     const startCall = async () => {
     setCallState("calling");
@@ -264,6 +361,7 @@ function Page() {
     peer.onIce(candidate => {
       emit({
         type: "call-ice",
+        otherUser,
         to: otherUser.otherUser?.uniqueUserId,
         candidate,
         session
@@ -272,6 +370,7 @@ function Page() {
 
     peer.onRemoteStream(stream => {
       if (remoteVideoRef.current) {
+        setRemoteStream(stream);
         remoteVideoRef.current.srcObject = stream;
       }
     });
@@ -280,6 +379,7 @@ function Page() {
 
     emit({
       type: "call-offer",
+      otherUser,
       to: otherUser.otherUser?.uniqueUserId,
       offer,
       session
@@ -295,6 +395,7 @@ function Page() {
 
     const stream = await peer.getMedia();
     peer.addTracks();
+    stream.getVideoTracks().forEach(t => (t.enabled = false));
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
@@ -325,28 +426,30 @@ function Page() {
     });
   };
 
-
   const endCall = () => {
     peer.close();
     setCallState("idle");
     setCall(false);
     setCallerId("");
+    console.log("callerid",callerId , session?.user.internalId);
 
     if (callerId) {
       emit({ type: "call-end", to: callerId , session });
+    } else {
+      emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session })
     }
-  };
+  }
 
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         try{
             setMsg(e.target.value)
             if(e.target.value.length === 0){
-                emit({ type: "Typing-stop" , activeId , session})
+                emit({ type: "Typing-stop" , activeId: activeId || chatid , session})
             } else if(e.target.value.length){
               console.log("user is typing...");
-                emit({ type: "Typing" , activeId , session})
+                emit({ type: "Typing" , activeId: activeId || chatid , session})
               setTimeout(() => {
-                emit({ type:"Typing-stop" , activeId , session})
+                emit({ type:"Typing-stop" , activeId: activeId || chatid , session})
               }, 3000);
             }
         } catch(error) {
@@ -373,12 +476,18 @@ function Page() {
    const isSeen = seenUserIds && seenUserIds.length > 0;
 
    console.log("seenuser",seenUserIds)
+
+   const handleClose = (val: boolean) => {
+    setDeleteMsg("");
+   }
   return (
     <div className={`w-full h-screen flex items-center justify-center ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
         {
             call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
-            user={user} stream={stream} caller={callerId} session={session}/>
+            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn}
+                        cameraOn={cameraOn} micOn={micOn} toggleCamera={toggleCamera} toggleMic={toggleMic} remoteStream={remoteStream}/>
         }
+        <Toaster />
         <div className="h-full lg:w-[60%] w-[95%] flex flex-col gap-1">
             <div className="p-2">
                 <div className="">
@@ -418,6 +527,11 @@ function Page() {
                     }
                 </div>
             </div>
+            {
+              deleteMsg && <AnimatePresence>
+                <Delete del={deleteMsg} close={() => setDeleteMsg("")} />
+              </AnimatePresence>
+            }
             <div 
               className="w-full h-[80%] overflow-auto flex flex-col gap-2"
               ref={chatRef}
@@ -435,9 +549,32 @@ function Page() {
 
                             const showDateDivider = index === 0 || currentDate !== previous;
 
+                            const isMe = msg.senderId === session?.user.internalId;
+
+                            const handleReplyClick = (id: string) => {
+                                     const el = messageRefs.current[id];
+                                     if (!el) {
+                                       console.warn("Reply target not found:", id);
+                                       return;
+                                      }
+
+                               el.scrollIntoView({
+                                 behavior: "smooth",
+                                 block: "center",
+                               });
+
+                               el.classList.add("ring-2", "ring-blue-400");
+                               setTimeout(() => {
+                                 el.classList.remove("ring-2", "ring-blue-400");
+                               }, 1200);
+                              };
+
                         return (
                             <>
-                            <div className="w-full text-center">
+                            <div className="w-full text-center"
+                            ref={(el) => {
+                               messageRefs.current[msg.clientMessageId] = el;
+                            }}>
                                  {showDateDivider && (
                                    <div className="flex justify-center my-3">
                                      <span className="px-3 py-1 text-xs text-gray-500 bg-gray-200 rounded-full">
@@ -447,16 +584,95 @@ function Page() {
                                  )}
                             </div>
                             <motion.div
+                             drag="x"
+                             dragSnapToOrigin
+                             dragDirectionLock
+                             dragElastic={0.2}
+                             dragConstraints={{
+                              left: isMe ? 0 : -80,
+                              right: isMe ? 80 : 0
+                             }}
+                             onDragEnd={(e , info) => {
+                              if(Math.abs(info.offset.x) > 40) {
+                                setReplyTo(msg);
+                              }
+                              if(Math.abs(info.offset.x) > 80) {
+                                setReplyTo("");
+                                if(msg.senderId === session?.user.internalId) {
+                                  setDeleteMsg(msg)
+                                } else {
+                                  setReplyTo(msg);
+                                }
+                              }
+                              if(Math.abs(info.offset.x) > 160) {
+                                setReplyTo("");
+                                setDeleteMsg("");
+                                const FIVE_MINUTES = 5 * 60 * 1000;
+                                if(msg.senderId === session?.user.internalId) {
+                                  let msgTime;
+                                  if(msg.createdAt === number) {
+                                    console.log("number",true);
+                                    msgTime = msg.createdAt;
+                                  } else {
+                                    msgTime = new Date(msg.createdAt).getTime()
+                                    console.log("msgf time", msgTime);
+                                  }
+                                  if(Date.now() - msgTime <= FIVE_MINUTES) {
+                                    setEdit(msg);
+                                    setMsg(msg.text)
+                                  } else {
+                                    toast.error("cannot edit msg now");
+                                  }
+                                } else {
+                                  setReplyTo(msg);
+                                }
+                              }
+                             }}
                              key={index}
-                             className={`p-2 rounded flex flex-col relative lg:max-w-[50vw] md:max-w-[55vw] sm:max-w-[60vw] max-w-[95%] ${
+                             className={`p-2 flex flex-col relative lg:max-w-[50vw] md:max-w-[55vw] sm:max-w-[60vw] max-w-[95%] ${
                                  msg.senderId === session?.user.internalId
-                                 ? "bg-blue-500 text-white ml-auto"
-                                 : "bg-gray-200 text-black mr-auto"
+                                 ?(
+                                    ( edit._id === msg._id ) 
+                                    ? "bg-red-500 rounded-xl rounded-br-none text-white ml-auto" 
+                                    : "bg-blue-500 rounded-xl rounded-br-none text-white ml-auto"
+                                  )
+                                 : "bg-gray-200 rounded-xl rounded-bl-none text-black mr-auto"
                              }`}
                              >
-                             <span className='max-w-[90%] flex-1 md:max-w-full break-words text-[4vw] sm:text-[2.2vw] md:text-[1.6vw] lg:text-[1.3vw] xl:text-[1vw]'>{msg.text}</span>
-                             <div className="w-full text-end">
+                             <div className="">
+                              {
+                                msg.reply?.senderId && (
+                                  <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                     handleReplyClick(msg.reply.clientId) 
+                                    }}
+                                   className={`mb-1 rounded border-l-4 p-1 text-sm
+                                       ${isMe
+                                         ? "bg-blue-400/40 border-blue-300"
+                                         : "bg-gray-300 dark:bg-gray-500 border-green-500"
+                                       }`}
+                                   >
+                                    <div className="font-bold">
+                                      {
+                                         msg.reply.senderId === session?.user.internalId ? "You" : otherUser.otherUser?.fullName
+                                      }
+                                    </div>
+                                    <div className="w-full break-words">{msg.reply.text}</div>
+                                 </div>
+                                )
+                              }
+                              <div
+                              className='max-w-xs relative break-words flex-1 md:max-w-full text-[4vw] sm:text-[2.2vw] md:text-[1.6vw] lg:text-[1.3vw] xl:text-[1vw]'>{msg.text}</div>
+                              {
+                                msg.edited && 
+                                <div className="">
+                                  <small>(edited)</small>
+                                </div>
+                              }
+                              <div className="w-full text-end">
                                 <p className='flex-1 ml-3 text-[3.2vw] sm:text-[2vw] md:text-[1.5vw] lg:text-[1vw] xl:text-[0.9vw]'>{formatISTTime(msg.createdAt)}</p>
+                              </div>
                              </div>
                              </motion.div>
                              </>
@@ -487,7 +703,7 @@ function Page() {
                 }
             </div>
             <div className="flex items-center gap-5">
-                <div className="flex-1">
+                <div className="flex-1 relative">
                     <input 
                       type="text" 
                       value={msg}
@@ -495,6 +711,31 @@ function Page() {
                       className={`px-3 py-3 w-full text-white rounded-lg border-none flex-1 outline-none shadow-[0_0_15px_4px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]`}
                       placeholder='Say, "Hi"'
                     />
+                    <div className={`absolute left-0 bottom-full rounded-md bg-black transition-all z-99 duration-400 ease-in p-2
+                      ${edit ? "translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}>
+                        <div className="border-cyan-500" onClick={() => {
+                          setEdit("")
+                          setMsg("")
+                          }}>
+                          <i className="ri-close-fill"></i>
+                        </div>
+                    </div>
+                    <div className={`absolute left-0 bottom-full border-cyan-500 rounded-md bg-black border-1 border-b-none transition-all z-99 duration-400 ease-in w-full p-2
+                      ${replyTo ? "translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}>
+                        <div className="flex flex-col after:content-[''] after:absolute after:-left-1 after:top-0 after:h-full after:w-2 after:rounded-md after:bg-cyan-800">
+                          <div className="w-full flex items-center justify-between">
+                            <div className="text-bold">
+                              {otherUser?.otherUser?.fullName}
+                            </div>
+                            <div className="" onClick={() => setReplyTo("")}>
+                              <i className="ri-close-fill"></i>
+                            </div>
+                          </div>
+                          <div className="w-full max-h-[40vh] text-gray-300 break-words">
+                            {replyTo.text}
+                          </div>
+                        </div>
+                    </div>
                 </div>
                 <div className="">
                     <button

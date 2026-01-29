@@ -6,7 +6,8 @@ import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { NotificationType } from '../General/page'
 import { useAppDispatch, useAppSelector } from '@/redux/hooks'
-import { Friend } from '@/redux/friendSlice'
+import { Friend, removeFriendRequest } from '@/redux/friendSlice'
+import { removeNotification } from '@/redux/notificationSlice'
 
 type props = {
   isOn: boolean,
@@ -23,7 +24,7 @@ function Notification({ onIs , close , accepted }: props) {
 
   const [loading , setLoading] = useState<boolean>(true);
   const [click , isClick ] = useState<boolean>(false);
-  // const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
   const notificationReceived = useAppSelector((state) => state.friends.requests);
   const friens = useAppSelector((state) => state.friends.friends);
   const pendingNotification = useAppSelector((state) => state.notifications.items);
@@ -77,9 +78,10 @@ function Notification({ onIs , close , accepted }: props) {
       dragSnapToOrigin
       dragConstraints={{ top: 5, bottom: 0 }}
       exit={{ 
-        y: 0,
+        y: 5,
+        opacity: 0,
         transition: {
-            duration: 1
+            duration: 0.8
         }
       }}
       onDragEnd={(e, info) => {
@@ -162,7 +164,12 @@ function Notification({ onIs , close , accepted }: props) {
                             <div className="h-full w-full bg-blue-600 text-white px-3 py-1.5 rounded-md">Accept</div> : <div className="h-full w-full px-3 rounded-md py-1.5 bg-white text-black">Message</div> }
                           </div>
                           <div className="">
-                            <i className="ri-close-line hover:cursor-pointer" onClick={() => close(false)}></i>
+                            <i className="ri-close-line hover:cursor-pointer" onClick={() => {
+                              if(notificationReceived.length <= 1) {
+                                close(false);
+                              }
+                              dispatch(removeFriendRequest({ to: notify._id, from: notify.to ? notify.to : "" }))
+                            }}></i>
                           </div>
                         </div>
                     </div>

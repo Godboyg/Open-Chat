@@ -41,29 +41,6 @@ function Page() {
     })
   },[session])
 
-  // useEffect(() => {
-
-  //    const socket = getSocket();
-
-  //   axios.get("http://localhost:9100/api").then((res) => {
-  //     console.log("msg",res.data);
-  //   })
-
-  //   socket.onopen = () => {
-  //     console.log('✅ Connected to server')
-  //     socket.send('Hello server!')
-  //   }
-
-  //   socket.onmessage = (event: any) => {
-  //     const data = JSON.parse(event.data);
-  //     console.log('📩 Message from server:', data)
-  //   }
-
-  //   socket.onclose = () => {
-  //     console.log('❌ WebSocket disconnected')
-  //   }
-  // },[])
-
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -84,17 +61,9 @@ function Page() {
       const res = await axios.get("/api/app/user/current" , {
         params: {
           uniqueUserId: session?.user.internalId
-        }
+        } 
       })
       console.log("response ", res?.data.Message);
-      // if(res.data.Message === "User not found!" && status === "authenticated"){
-      //   console.log("user not found create");
-      //   const res = await axios.post("/api/app/user/create",{
-      //     userId: session?.user?.email,
-      //     photo: session?.user?.image
-      //     deviceId : device || deviceId
-      //   })
-      // }
     }
     catch(error) {
       console.log("error",error)

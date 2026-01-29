@@ -14,6 +14,7 @@ import storage from "redux-persist/lib/storage";
 const persistConfig = {
   key: "root",
   storage,
+  version: 1,
   whitelist: ["theme", "friends", "conversations"], 
 };
 
@@ -29,15 +30,6 @@ const persistedReducer = persistReducer(
   persistConfig,
   combineReducers(rootReducer)
 );
-
-// const store = configureStore({
-//   reducer: {
-//     theme: themeReducer,
-//     friend: friendReducer,
-//     message: messageReducer,
-//     conversation: conversationReducer
-//   },
-// });
 
 export const store = configureStore({
   reducer: persistedReducer,

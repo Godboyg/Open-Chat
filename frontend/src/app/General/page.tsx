@@ -1,10 +1,11 @@
 "use client"
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
+import React, { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import Dots from '../Components/Dots';
 import { motion , AnimatePresence } from 'motion/react';
 import { signOut } from 'next-auth/react';
 import { getSocket , subscribe , emit } from '@/lib/socket';
+import { timeAgo } from '@/lib/timeAgo';
 import { getCurrentTime } from './CurrentTime';
 import { useSession } from 'next-auth/react';
 import { Suspense } from "react";
@@ -19,11 +20,13 @@ import { setOnlineCount, setUserOnline } from '@/redux/themeSlice';
 import axios from 'axios';
 import Notification from '../Components/Notification';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
-import { setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
+import { Conversation, setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
 import { addNotification } from '@/redux/notificationSlice';
 import { addMessage } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 import { subscribeToPush } from '@/lib/push';
+import peer from '@/webrtc/peer';
+import Call from '../Components/Call';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -76,13 +79,15 @@ export type NotificationType = {
     }
 }
 
+type CallState = "idle" | "calling" | "ringing" | "connected";
+
 function Page() {
     const [open , setOpen] = useState(false);
     const [notify , setNotify] = useState<NotificationType[]>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [thought , setThought] = useState<string | null | undefined>("");
     const [screenSize , setScreenSize] = useState(true);
-    // const [allUsers, setAllUsers] = useState<number>()
+    const [otherUser , setOtherUser] = useState<any>("");
     const [typer , setTypers] = useState<string[]>([]);
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const [loading , setLoading] = useState<boolean>(false)
@@ -94,12 +99,7 @@ function Page() {
     const [isTrue , setIsTrue] = useState(false);
     const [pMsg , setPMsg] = useState<any[]>([]);
     const [conve , setConvo] = useState<string>("");
-    const [messages , setMessages] = useState<message[]>([]
-    //     () => {
-    //   const saved = localStorage.getItem("msg");
-    //   return saved ? JSON.parse(saved) : [];
-    // } 
-    )
+    const [messages , setMessages] = useState<message[]>([])
     console.log("messagesss",messages);
     const [formdata , setFormData] = useState({
       fullName: "",
@@ -125,6 +125,23 @@ function Page() {
     const router = useRouter();
     const { data: session , status} = useSession();
     const [currentProfile , setCurrentProfile] = useState<message | null >(null)
+
+    const [callState, setCallState] = useState<CallState>("idle");
+    const [callerId, setCallerId] = useState<string | null>(null);
+    const [call , setCall] = useState<boolean>(false);
+    const [incomingOffer, setIncomingOffer] =useState<RTCSessionDescriptionInit | null>(null);
+    const [user , setUser] = useState<boolean>(false);
+    const [remoteVideoOn, setRemoteVideoOn] = useState(false);
+    const [cameraOn, setCameraOn] = useState(false);
+    const [micOn, setMicOn] = useState(true);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
+    useEffect(() => {
+        setTyping(false);
+    },[open])
 
     useEffect(() => {
         const fn = async() => {
@@ -280,9 +297,9 @@ function Page() {
     },[])
 
     useEffect(() => {
-        getSocket()
+        getSocket();
         
-        const unsubscribe = subscribe((data: any) => {
+        const unsubscribe = subscribe(async(data: any) => {
             console.log("data on message",data);
             if(data.isActive){
                 console.log("datasda",data);
@@ -421,18 +438,6 @@ function Page() {
                    senderId: session?.user.internalId,
                    text: data.message.text
                 }))
-            } else if(data.type === "message received"){
-               setTyping(false);
-               console.log("new message", data.msg);
-               setPMsg((prev) => [...prev, data.msg]);
-               dispatch(updateLastMessage({
-                conversationId: data.msg.conversationId,
-                lastMessage: {
-                  text: data.msg.text,
-                     senderId: data.msg.senderId,
-                     createdAt: data.msg.createdAt
-                   }
-                }));
             } else if(data.type === "Typing") {
                 if(data.convo){
                    setTyping(true);
@@ -477,7 +482,55 @@ function Page() {
                   }))
             } else if(data.type === "session-missing") {
                 toast.error("session mission login again!");
+            } else if (data.type === "call-offer") {
+                console.log("inco,mming,call",data);
+                setOtherUser(data.otherUser);
+                setCall(true);
+                setCallerId(data.from!);
+                setIncomingOffer(data.offer);
+                setCallState("ringing");
+            } else if (data.type === "call-answer") {
+                setCallState("connected");
+                console.log("callState!!",callState);
+                console.log("inco,mming,call,answer");
+                await peer.setRemoteAnswer(data.answer);
             }
+            else if (data.type === "call-ice") {
+              peer.addIce(data.candidate);
+            }
+            else if (data.type === "call-end") {
+            //   endCall();
+              setCallerId("");
+              setCall(false);
+            } if (data.type === "video-state") {
+              setRemoteVideoOn(data.enabled);
+            } else if(data.type === "message received"){
+                 setTyping(false);
+                 console.log("new message", data.msg);
+                 setPMsg((prev) => [...prev, data.msg]);
+                 dispatch(addMessage({
+                  _id: crypto.randomUUID(),
+                  conversationId: data.msg.conversationId,
+                  senderId: data.msg.senderId,
+                  text: data.msg.text,
+                  createdAt: data.msg.createdAt,
+                  status: "sent",
+                  reply: {
+                   clientId: data.reply?.clientId,
+                   senderId: data.reply?.senderId,
+                   text: data.reply?.text,
+                   name: data.reply?.name
+                 }
+                 }));
+                 dispatch(updateLastMessage({
+                   conversationId: data.msg.conversationId,
+                   lastMessage: {
+                       text: data.msg.text,
+                       senderId: data.msg.senderId,
+                       createdId: data.msg.createdAt
+                   }
+                 }));
+             }
         })
 
         return () => unsubscribe()
@@ -696,6 +749,24 @@ function Page() {
         }
     }
 
+    const handleSignOut = async() => {
+      try{
+        const internalId = session?.user.internalId;
+
+        const res = await axios.delete("/api/app/user/delete",{
+          data : {
+            internalId
+          }
+        })
+
+        console.log("response", res.data);
+
+        await signOut();
+      } catch(error) {
+        console.log("error",error);
+      }
+    }
+
     const handleOnIs = (e: boolean) => {
         console.log("baiaa",e);
         setShow(false)
@@ -726,6 +797,23 @@ function Page() {
         }
     }
 
+    const toggleCamera = () => {
+            const next = !cameraOn;
+             peer.toggleCamera(!cameraOn);
+             setCameraOn(prev => !prev);
+                   emit({
+               type: "video-state",
+                      enabled: next,
+               to: otherUser.otherUser?.uniqueUserId,
+                       session
+             })
+           };
+    
+        const toggleMic = () => {
+          peer.toggleMic(!micOn);
+          setMicOn(prev => !prev);
+        };
+
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         try{
             setThought(e.target.value);
@@ -742,10 +830,69 @@ function Page() {
             console.log("error",error);
         }
     }
+
+    const acceptCall = async () => {
+        if (!incomingOffer || !callerId) return;
+    
+        setCallState("connected");
+    
+        peer.createPeer();
+    
+        const stream = await peer.getMedia();
+        peer.addTracks();
+        stream.getVideoTracks().forEach(t => (t.enabled = false));
+    
+        setStream(stream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+    
+        peer.onIce(candidate => {
+          emit({
+            type: "call-ice",
+            to: callerId,
+            candidate,
+            session
+          });
+        });
+    
+        peer.onRemoteStream(stream => {
+          if (remoteVideoRef.current) {
+            setRemoteStream(stream);
+            remoteVideoRef.current.srcObject = stream;
+          }
+        });
+    
+        const answer = await peer.createAnswer(incomingOffer);
+    
+        emit({
+          type: "call-answer",
+          to: callerId,
+          answer,
+          session
+        });
+      };
+    
+    
+      const endCall = () => {
+        peer.close();
+        setCallState("idle");
+        setCall(false);
+        setCallerId("");
+    
+        if (callerId) {
+          emit({ type: "call-end", to: callerId , session });
+        } 
+      }
  
   return (
     <div className={`h-screen relative w-full ${mode ? "bg-black text-white" : "bg-white text-black"}`}>
         <Toaster />
+        {
+            call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
+            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn}
+                        cameraOn={cameraOn} micOn={micOn} toggleCamera={toggleCamera} toggleMic={toggleMic} remoteStream={remoteStream}/>
+        }
         <div className="w-full flex items-center justify-center">
             {
                 show && (
@@ -755,8 +902,8 @@ function Page() {
                 )
             }
         </div>
-        <div className="py-3 px-3.5 flex items-center w-full">
-            <div className="p-4 md:py-3 md:px-4 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
+        <div className="py-2 px-3.5 flex items-center w-full">
+            <div className="p-3 md:py-2.5 md:px-3.5 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
              bg-black shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]"
             onClick={handleMsgClick}>
                 {
@@ -771,12 +918,14 @@ function Page() {
                     ) : (
                         conversations.length > 0 && (
                          hasMessage ? (
-                          <div className="relative">
-                            <i className="ri-send-plane-line"></i>
+                          <div className="relative bg-green-500">
+                            <i className="ri-send-plane-line text-sm"></i>
                             <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
                             </div>
                           ) : (
-                           <Dots theme={mode} />
+                           <div className="p-2">
+                            <Dots theme={mode} />
+                           </div>
                           )
                          )
                     )
@@ -854,7 +1003,7 @@ function Page() {
                 </div>
                 <div
                 ref={contRef}
-                className="h-[87%] chat-container relative flex flex-col overflow-auto scrollbar-thin scrollbar-thumb-green-400 scrollbar-track-gray-800 hover:scrollbar-thumb-green-300">
+                className="h-[86%] chat-container relative flex flex-col overflow-auto scrollbar-thin scrollbar-thumb-green-400 scrollbar-track-gray-800 hover:scrollbar-thumb-green-300">
                    {
                     messages?.length !== 0 ? (
                         messages.map((msg: message ,i) => {
@@ -1187,7 +1336,7 @@ function Page() {
           }}
         >
           {loading ? (
-            <span className="p-2 h-4 w-4 border-2 border-white rounded-full animate-spin"></span>
+            <span className="p-2 h-4 w-4 border-2 border-cyan-500 rounded-full animate-spin"></span>
           ) : (
             "Message"
           )}
@@ -1231,7 +1380,7 @@ function Page() {
                                     <span className='md:text-xl hover:cursor-pointer'>General</span>
                                     <div className="flex items-center justify-center gap-1">
                                         <span className='h-2.5 w-2.5 rounded-full bg-green-500'></span>
-                                        <span className=''>{onlineCount}</span>
+                                        <span className="">{onlineCount}</span>
                                     </div>
                                  </div>
                                </div>
@@ -1247,7 +1396,7 @@ function Page() {
                                         <div className="flex flex-col gap-2">
                                             {
                                                 conversations.length > 0 ? (
-                                                        conversations.map((convo , index) => {
+                                                        conversations.map((convo: Conversation , index) => {
                                                             console.log("convoooo",convo);
                                                             return (
                                                               <div className="flex relative hover:cursor-pointer items-center justify-between px-2 py-0.5 rounded-md gap-2 w-full"
@@ -1281,14 +1430,18 @@ function Page() {
                                                                         <div className="mb-3.5">
                                                                             {convo?.otherUser?.fullName}                                                                       
                                                                         </div>
-                                                                        <div className="lg:text-[1vw] md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
+                                                                        <div className="lg:text-[1vw] w-full md:text-[2.4vw] sm:text-[2.8vw] text-[3.4vw]">
                                                                            {
                                                                             conve === convo.convo._id && typing ? (
                                                                                  <small className='italic absolute top-4.5'>Typing.....</small>
                                                                             ) : (
                                                                             convo.message === 0 ? ( 
                                                                               convo.convo.lastMessage?.senderId !== session?.user?.internalId 
-                                                                                ? <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
+                                                                                ? <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
+                                                                                    <small className='font-light truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
+                                                                                    <span className='h-1 w-1 rounded-full bg-gray-500'></span>
+                                                                                    <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                </div>
                                                                                 : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
                                                                                         <small className="">Sent</small>
@@ -1300,14 +1453,18 @@ function Page() {
                                                                                 <div className="">
                                                                                     {
                                                                                         convo.message === 1 ?
-                                                                                         <small className='absolute top-4.5'>{convo.convo.lastMessage?.text}</small>
+                                                                                         <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
+                                                                                           <small className='font-bold truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
+                                                                                           <span className='h-1 w-1 rounded-full bg-gray-500'></span>
+                                                                                           <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                         </div>
                                                                                          : (
                                                                                             convo.message && convo.message > 4 ? (
-                                                                                            <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>
+                                                                                            <small className='font-bold absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>
                                                                                                {4}+ New Messages
                                                                                             </small>
                                                                                         ) : (
-                                                                                            <small className='italic font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>
+                                                                                            <small className='italic font-bold absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[30vw] truncate tracking-widest'>
                                                                                               {convo.message} New Message
                                                                                             </small>
                                                                                         )
@@ -1352,7 +1509,7 @@ function Page() {
                                         }
                                     </div>
                                 </div>
-                                <div className="" onClick={() => signOut()}>
+                                <div className="" onClick={handleSignOut}>
                                     Logout
                                 </div>
                             </div>

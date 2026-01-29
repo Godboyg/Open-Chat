@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { notStrictEqual } from "assert";
 
 interface otherUser {
   image: string,
@@ -13,6 +14,7 @@ interface notify {
 export interface NotificationN {
   _id: string;
   // type: "friend" | "message";
+  to: string,
   type: string;
   message: string;
   createdAt?: string;
@@ -40,6 +42,16 @@ const notificationSlice = createSlice({
       // if (!action.payload.read) state.unreadCount++;
     },
 
+    removeNotification: (state, action: PayloadAction<{ to: string , message: string }>) => {
+      const { to, message } = action.payload;
+
+      state.items = state.items.filter(notification => !(
+           notification.to === to &&
+           notification.message === message
+        )
+      )
+     },
+
     markAllRead(state , action: PayloadAction<string>) {
       state.items.forEach(n => 
         n._id === action.payload && n.read === true
@@ -56,6 +68,7 @@ export const {
   addNotification,
   markAllRead,
   resetNotifications,
+  removeNotification
 } = notificationSlice.actions;
 
 export default notificationSlice.reducer;

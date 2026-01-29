@@ -1,4 +1,3 @@
-
 const rtcConfig: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -36,6 +35,10 @@ class PeerService {
 
   async createOffer(): Promise<RTCSessionDescriptionInit> {
     if (!this.pc) throw new Error("Peer not created");
+    if (this.pc.signalingState !== "stable") {
+      console.warn("Cannot create offer in state:", this.pc.signalingState);
+      return this.pc.localDescription!;
+    }
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
     return offer;
@@ -45,6 +48,10 @@ class PeerService {
     offer: RTCSessionDescriptionInit
   ): Promise<RTCSessionDescriptionInit> {
     if (!this.pc) throw new Error("Peer not created");
+    if (this.pc.signalingState !== "stable") {
+      console.warn("Offer already handled, state:", this.pc.signalingState);
+      return this.pc.localDescription!;
+    }
 
     await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await this.pc.createAnswer();
@@ -54,11 +61,35 @@ class PeerService {
 
   async setRemoteAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
     if (!this.pc) return;
+    if (this.pc.signalingState !== "have-local-offer") {
+      console.warn(
+        "Ignoring answer in state:",
+        this.pc.signalingState
+      );
+      return;
+    }
+
     await this.pc.setRemoteDescription(
       new RTCSessionDescription(answer)
     );
   }
 
+  toggleCamera(enabled: boolean): void {
+  if (!this.localStream) return;
+
+  this.localStream.getVideoTracks().forEach(track => {
+    track.enabled = enabled;
+  });
+}
+
+  toggleMic(enabled: boolean): void {
+  if (!this.localStream) return;
+
+  this.localStream.getAudioTracks().forEach(track => {
+    track.enabled = enabled;
+  });
+}
+  
   onRemoteStream(callback: (stream: MediaStream) => void): void {
     if (!this.pc) return;
 
@@ -83,7 +114,7 @@ class PeerService {
 
   addIce(candidate: RTCIceCandidateInit): void {
     if (!this.pc) return;
-    this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
   }
 
   close(): void {

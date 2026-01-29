@@ -1,7 +1,7 @@
 'use client';
 import { Provider } from 'react-redux';
 import { persistor, store } from '@/redux/store';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { PersistGate } from 'redux-persist/integration/react';
 import { SessionProvider } from "next-auth/react";

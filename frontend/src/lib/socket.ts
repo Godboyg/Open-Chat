@@ -1,9 +1,13 @@
 
 import { getSession } from "next-auth/react";
 import { subscribeToPush } from "./push";
+import { ErrorIcon } from "react-hot-toast";
 
 let socket: WebSocket | null = null;
+let queue: any[] = [];
 let listeners: ((data: any) => void)[] = []
+let openListenerAttached = false;
+const queuedEventTypes = new Set<string>();
 
 export function getSocket(): WebSocket {
   if (
@@ -71,11 +75,18 @@ export function getSocket(): WebSocket {
   });
 };
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("📩 Message from server:", data);
+    socket.onmessage = (event: any) => {
+      if (typeof event.data !== "string" || event.data.trim() === "") {
+       return;
+      }
+      try{
+        const data = JSON.parse(event.data);
+        console.log("📩 Message from server:", data);
 
-      listeners.forEach((cb) => cb(data));
+        listeners.forEach((cb) => cb(data));
+      } catch(error) {
+        console.warn("Invalid WS message:",error);
+      }
     };
 
     socket.onclose = () => {
@@ -101,14 +112,25 @@ export function subscribe(cb: any) {
 
 export function emit(event: any): void {
   const ws = getSocket();
+  const payload = JSON.stringify(event);
 
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(event));
-  } else {
-    ws.addEventListener(
-      "open",
-      () => ws.send(JSON.stringify(event)),
-      { once: true }
-    );
+    ws.send(payload);
+    return;
+  } 
+
+  if (!queuedEventTypes.has(event.type)) {
+    queuedEventTypes.add(event.type);
+    queue.push(payload);
+  }
+
+  if(!openListenerAttached) {
+    openListenerAttached = true;
+
+    ws.addEventListener("open", () => {
+      queue.forEach((msg) => ws.send(msg));
+      queue = [];
+      queuedEventTypes.clear();
+    });
   }
 }

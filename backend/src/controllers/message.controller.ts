@@ -12,7 +12,7 @@ export const allMessages = async({ query }: any) => {
 
         const messages = await Message.find({
             conversationId: activeId
-        }).sort({ createdAt: 1 });
+        }).sort({ createdAt: 1 }).populate("reply");
 
         return { message:"All messages are" , messages }
     } catch(Error) {

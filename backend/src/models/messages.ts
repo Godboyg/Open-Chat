@@ -2,6 +2,12 @@ import mongoose , { Types } from "mongoose"
 import conversation from "./conversation.js"
 import { DeliveryState } from "../ws/websocket.js";
 
+export interface reply {
+  senderId: string;
+  name: string | undefined;
+  text: string;
+}
+
 export interface IMessage {
   clientMessageId: string;
   conversationId: Types.ObjectId;
@@ -12,6 +18,8 @@ export interface IMessage {
   type: string;
   seenBy: string[];
   createdAt: Date;
+  reply?: reply;
+  edited: boolean;
 }
 
 const MessageSchema = new mongoose.Schema<IMessage>({
@@ -32,6 +40,13 @@ const MessageSchema = new mongoose.Schema<IMessage>({
     receiversId: [{
         type: String
     }],
+    reply: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "reply"
+    },
+    edited: {
+        type: Boolean
+    },
     // status: { 
     //     type: String ,
     //     enum: ["sending" , "sent" , "delivered" , "read"],

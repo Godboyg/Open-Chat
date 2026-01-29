@@ -1,4 +1,3 @@
-import { source } from "motion/react-client";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

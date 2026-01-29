@@ -3,7 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export type lastM = {
   text: string,
   senderId: string,
-  date: Date
+  createdId: Date | string
 }
 
 export type convo = {
@@ -19,7 +19,7 @@ export interface Conversation {
   convo: convo;
   otherUser?: {
     image: string,
-    fullName: string,
+    fullName: string | undefined,
     uniqueUserId: string,
     lastActive: string
   };
