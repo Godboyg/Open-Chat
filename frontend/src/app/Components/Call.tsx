@@ -422,8 +422,8 @@ function Call({
               object-cover rounded-lg transition-all duration-300
               ${
                 shink
-                  ? "fixed top-2 right-2 w-20 h-14 z-[999]"
-                  : "absolute top-5 right-5 w-40 h-60 z-[99]"
+                  ? "fixed top-2 right-2 w-20 h-14 z-[9999]"
+                  : "absolute top-5 right-5 w-40 h-60 z-[9999]"
               }
             `}
           />
