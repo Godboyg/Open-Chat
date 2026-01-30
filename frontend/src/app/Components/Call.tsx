@@ -501,7 +501,7 @@ function Call({
       {callState === "connected" && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30
                         bg-black/50 backdrop-blur-sm rounded-2xl px-6 py-3
-                        flex gap-6 items-center">
+                        flex gap-6 items-center z-9999">
 
           <button onClick={toggleCamera}>
             {cameraOn ? "📷 OFF" : "📷 ON"}
