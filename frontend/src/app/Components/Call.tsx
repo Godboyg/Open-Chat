@@ -414,8 +414,7 @@ function Call({
         />
 
         {/* REMOTE VIDEO */}
-        {remote && (
-          <video
+        <video
             ref={remoteVideo}
             autoPlay
             playsInline
@@ -429,7 +428,6 @@ function Call({
               }
             `}
           />
-        )}
 
       </div>
       {/* ================= END VIDEO LAYER ================= */}
