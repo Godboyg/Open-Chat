@@ -381,19 +381,7 @@ function Call({
   const [shink, setShink] = useState(false);
   const [small, setSmall] = useState(false);
 
-  /* ================= STREAM ATTACHMENT (CRITICAL) ================= */
-
-  useEffect(() => {
-    if (localVideo?.current && stream) {
-      localVideo.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  useEffect(() => {
-    if (remoteVideo?.current && remoteStream) {
-      remoteVideo.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
+  /* ================= STREAM ATTACHMENT (CRITICAL) ================= *
 
   /* ================= RENDER ================= */
 
