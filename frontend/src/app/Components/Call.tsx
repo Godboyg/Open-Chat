@@ -421,6 +421,7 @@ function Call({
             className={`
               pointer-events-auto
               object-cover rounded-lg transition-all duration-300
+              ${remote ? "block" : "hidden"}
               ${
                 shink
                   ? "fixed top-2 right-2 w-20 h-14 z-[9999]"
