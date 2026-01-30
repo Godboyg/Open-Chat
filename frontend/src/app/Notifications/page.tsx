@@ -132,9 +132,9 @@ function Page() {
                         createdAt: n.notify.createdAt,
                         read: true,
                         otherUser: {
-                            image: n.otherUser.image,
-                            name: n.otherUser.fullName,
-                            uniqueId: n.otherUser.uniqueUserId,
+                            image: n.otherUser?.image,
+                            name: n.otherUser?.fullName,
+                            uniqueId: n.otherUser?.uniqueUserId,
                         },
                         notify: {
                             createdAt: n.notify.createdAt
