@@ -8,24 +8,24 @@
 // import peer from '@/webrtc/peer';
 // import { video } from 'framer-motion/client';
 
-// interface props {
-//     callState: string;
-//     localVideo: RefObject<HTMLVideoElement | null>;
-//     remoteVideo: RefObject<HTMLVideoElement | null>;
-//     onAccept: () => void;
-//     onEndCall: () => void;
-//     other: any;
-//     user: boolean;
-//     stream: MediaStream | null;
-//     caller: string | null;
-//     session: Session | null;
-//     remote: boolean;
-//     cameraOn: boolean;
-//     micOn: boolean;
-//     toggleCamera: () => void;
-//     toggleMic: () => void;
-//     remoteStream: MediaStream | null;
-// }
+interface props {
+    callState: string;
+    localVideo: RefObject<HTMLVideoElement | null>;
+    remoteVideo: RefObject<HTMLVideoElement | null>;
+    onAccept: () => void;
+    onEndCall: () => void;
+    other: any;
+    user: boolean;
+    stream: MediaStream | null;
+    caller: string | null;
+    session: Session | null;
+    remote: boolean;
+    cameraOn: boolean;
+    micOn: boolean;
+    toggleCamera: () => void;
+    toggleMic: () => void;
+    remoteStream: MediaStream | null;
+}
 
 // function Call({ callState , localVideo , remoteVideo , onAccept , onEndCall , other , user , stream , caller , remote , session, cameraOn,
 //   micOn, toggleCamera, toggleMic , remoteStream}: props) {
