@@ -381,7 +381,7 @@ function Call({
   const [shink, setShink] = useState(false);
   const [small, setSmall] = useState(false);
 
-    console.log("remote",remote);
+    console.log("remote",remote , remoteVideo);
 
   /* ================= STREAM ATTACHMENT (CRITICAL) ================= *
 
