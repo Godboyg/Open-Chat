@@ -395,7 +395,7 @@ function Page() {
 
     const stream = await peer.getMedia();
     peer.addTracks();
-    stream.getVideoTracks().forEach(t => (t.enabled = false));
+    // stream.getVideoTracks().forEach(t => (t.enabled = false));
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
