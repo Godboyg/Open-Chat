@@ -1,12 +1,12 @@
-// import React, { useEffect, useRef, useState } from 'react'
-// import { motion , AnimatePresence, secondsToMilliseconds, useAnimation } from 'motion/react'
+import React, { useEffect, useRef, useState } from 'react'
+import { motion , AnimatePresence, secondsToMilliseconds, useAnimation } from 'motion/react'
 import { RefObject } from "react";
-// import Image from 'next/image';
-// import { emit } from '@/lib/socket';
-// import { toggleCamera, toggleMic } from './mediaControls';
-// import { Session } from 'next-auth';
-// import peer from '@/webrtc/peer';
-// import { video } from 'framer-motion/client';
+import Image from 'next/image';
+import { emit } from '@/lib/socket';
+import { toggleCamera, toggleMic } from './mediaControls';
+import { Session } from 'next-auth';
+import peer from '@/webrtc/peer';
+import { video } from 'framer-motion/client';
 
 interface props {
     callState: string;
@@ -359,9 +359,6 @@ interface props {
 // }
 
 // export default Call
-
-
-import { useEffect, useState } from "react";
 
 function Call({
   callState,
