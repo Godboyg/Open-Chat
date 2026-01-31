@@ -125,6 +125,7 @@ function Page() {
     const router = useRouter();
     const { data: session , status} = useSession();
     const [currentProfile , setCurrentProfile] = useState<message | null >(null)
+    const [speakerOn, setSpeakerOn] = useState(false);
 
     const [callState, setCallState] = useState<CallState>("idle");
     const [callerId, setCallerId] = useState<string | null>(null);
@@ -295,6 +296,20 @@ function Page() {
 
         document.addEventListener("mousedown",handleDown);
     },[])
+
+    const toggleSpeaker = () => {
+      const next = !speakerOn;
+
+      peer.toggleSpeaker(next);
+      setSpeakerOn(prev => !prev);
+
+      emit({
+        type: "speaker-state",
+        enabled: next,
+        to: otherUser.otherUser?.uniqueUserId,
+        session
+      });
+    };
 
     useEffect(() => {
         getSocket();
@@ -890,7 +905,7 @@ function Page() {
         <Toaster />
         {
             call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
-            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn}
+            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn} speakerOn={speakerOn} toggleSpeaker={toggleSpeaker}
                         cameraOn={cameraOn} micOn={micOn} toggleCamera={toggleCamera} toggleMic={toggleMic} remoteStream={remoteStream}/>
         }
         <div className="w-full flex items-center justify-center">
