@@ -9,6 +9,7 @@ class PeerService {
   private pc: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
+  private remoteVideoEl: HTMLVideoElement | null = null;
 
   createPeer(): RTCPeerConnection {
     if (!this.pc) {
@@ -81,6 +82,16 @@ class PeerService {
     track.enabled = enabled;
   });
 }
+
+  setRemoteVideoElement(el: HTMLVideoElement): void {
+     this.remoteVideoEl = el;
+  }
+
+  toggleSpeaker(enabled: boolean): void {
+    if (!this.remoteVideoEl) return;
+
+    this.remoteVideoEl.muted = !enabled;
+  }
 
   toggleMic(enabled: boolean): void {
   if (!this.localStream) return;
