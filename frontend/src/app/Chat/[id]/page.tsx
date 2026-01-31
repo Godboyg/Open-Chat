@@ -36,6 +36,7 @@ function Page() {
     const [typing , setTyping] = useState<boolean>(false);
     const [notFriend , setNotFriend] = useState<boolean>(false);
     const [call , setCall] = useState<boolean>(false);
+    const [speakerOn, setSpeakerOn] = useState(false);
     const params = useParams();
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -212,6 +213,20 @@ function Page() {
       setMicOn(prev => !prev);
     };
 
+    const toggleSpeaker = () => {
+      const next = !speakerOn;
+
+      peer.toggleSpeaker(next);
+      setSpeakerOn(prev => !prev);
+
+      emit({
+        type: "speaker-state",
+        enabled: next,
+        to: otherUser.otherUser?.uniqueUserId,
+        session
+      });
+    };
+
     useEffect(() => {
         const fn = async() => {
             let subscription = await subscribeToPush(key ? key : "");
@@ -330,19 +345,21 @@ function Page() {
       loadMessages();
     }, [activeId]);
 
-    // useEffect(() => {
-    //     const timer =  setTimeout(() => {
-    //         if(callState !== "connected") {
-    //            setCall(false);
-    //            setCallState("idle");
-    //            toast.error("not answering");
-    //         }
-    //     },10000)
+    useEffect(() => {
+        const timer =  setTimeout(() => {
+            if(callState !== "connected") {
+               setCall(false);
+               setCallState("idle");
+               toast.error("not answering");
+            }
+        },10000)
 
-    //     return () => clearTimeout(timer)
-    // },[callState])
+        return () => clearTimeout(timer)
+    },[callState])
 
     const startCall = async () => {
+      setReplyTo("")
+      setEdit("");
     setCallState("calling");
     setCall(true);
     setCallerId(session?.user.internalId ? session.user.internalId : "");
@@ -364,7 +381,7 @@ function Page() {
         otherUser,
         to: otherUser.otherUser?.uniqueUserId,
         candidate,
-        session
+        session,
       });
     });
 
@@ -372,6 +389,7 @@ function Page() {
       if (remoteVideoRef.current) {
         setRemoteStream(stream);
         remoteVideoRef.current.srcObject = stream;
+        peer.setRemoteVideoElement(remoteVideoRef.current);
       }
     });
 
@@ -382,7 +400,8 @@ function Page() {
       otherUser,
       to: otherUser.otherUser?.uniqueUserId,
       offer,
-      session
+      session,
+      id: activeId || chatid
     });
   };
 
@@ -395,7 +414,7 @@ function Page() {
 
     const stream = await peer.getMedia();
     peer.addTracks();
-    // stream.getVideoTracks().forEach(t => (t.enabled = false));
+    stream.getVideoTracks().forEach(t => (t.enabled = false));
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
@@ -413,6 +432,7 @@ function Page() {
     peer.onRemoteStream(stream => {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
+        peer.setRemoteVideoElement(remoteVideoRef.current);
       }
     });
 
@@ -429,14 +449,18 @@ function Page() {
   const endCall = () => {
     peer.close();
     setCallState("idle");
+    setCameraOn(false);
+    setSpeakerOn(false);
+    setMicOn(true);
     setCall(false);
     setCallerId("");
     console.log("callerid",callerId , session?.user.internalId);
 
     if (callerId) {
-      emit({ type: "call-end", to: callerId , session });
+     emit({ type: "call-end", to: callerId , session });
     } else {
-      emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session })
+      emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
+      return;
     }
   }
 
@@ -484,7 +508,7 @@ function Page() {
     <div className={`w-full h-screen flex items-center justify-center ${mode === "light" ? "bg-white text-black" : "bg-black text-white"}`}>
         {
             call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
-            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn}
+            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn} speakerOn={speakerOn} toggleSpeaker={toggleSpeaker}
                         cameraOn={cameraOn} micOn={micOn} toggleCamera={toggleCamera} toggleMic={toggleMic} remoteStream={remoteStream}/>
         }
         <Toaster />
