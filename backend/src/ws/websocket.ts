@@ -566,15 +566,6 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                   })
                 }
               }
-
-              // if(socket){
-              //   await Message.findOneAndUpdate({
-              //    receiversId: data.userId,
-              //    [`deliveryStatus.${userId}`] : "sent"
-              //   },{
-              //    [`deliveryStatus.${userId}`]: "delivered"
-              //   })
-              // }
             }
            } catch(error) {
             console.log("error",error);
@@ -801,13 +792,29 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
       if (!target) return;
 
       ws.send(JSON.stringify({ type: "user-there" }));
-
-      target.send(
-        JSON.stringify({
-          ...data,
-          from: data.session?.user?.internalId
-        })
-      );
+      if(target) {
+        target.send(
+          JSON.stringify({
+            ...data,
+            from: data.session?.user?.internalId
+          })
+        );
+      } else {
+        const webPushSubscription = subscriptions.get(data.to) as PushSubscription;
+        if(webPushSubscription) {
+          await sendPushNotification(webPushSubscription, {
+            title: "Incoming Call",
+            body: `${data.otherUser.otherUser?.fullName} is calling you`,
+            data: {
+              type: "INCOMING_CALL",
+              callerId: data.session?.user?.internalId,
+              callerName: data.session?.user.name,
+              sessionId: data.to
+            },
+            url: `/chat/${data.id}`,
+          })
+        }
+      }
     }
        })
     } catch(err) {
