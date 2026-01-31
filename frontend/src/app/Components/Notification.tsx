@@ -133,7 +133,8 @@ function Notification({ onIs , close , accepted }: props) {
                   <div className="w-full">
                     <div className="w-full flex flex-col gap-1">
                 {
-                  notificationReceived.map((notify , index) => (
+                  notificationReceived.map((notify , index) => 
+                    notify.image && (
                     <div className="flex items-center justify-between gap-2 w-full"
                     key={index}>
                        <div className="flex items-center gap-3">
