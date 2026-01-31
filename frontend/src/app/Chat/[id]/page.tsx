@@ -351,6 +351,9 @@ function Page() {
                setCall(false);
                setCallState("idle");
                toast.error("not answering");
+                if(peer) {
+                    peer.close();
+                }
             }
         },10000)
 
