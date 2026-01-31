@@ -347,7 +347,7 @@ function Page() {
 
     useEffect(() => {
         const timer =  setTimeout(() => {
-            if(callState !== "connected") {
+            if(callState !== "connected" && peer && callerId) {
                setCall(false);
                setCallState("idle");
                toast.error("not answering");
