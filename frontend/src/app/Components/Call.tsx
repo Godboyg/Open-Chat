@@ -120,8 +120,11 @@ function Call({
           <p onClick={() => setShink(!shink)}>
             {callState !== "connected"
               ? user ? "Ringing..." : "Calling..."
-              : "⬍"
+              : ""
             }
+              {
+               callState === "connected" && <div>⬍</div>
+              }
           </p>
 
           <button onClick={onEndCall}>🔴 End</button>
