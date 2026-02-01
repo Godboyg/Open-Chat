@@ -450,6 +450,7 @@ function Page() {
   };
 
   const endCall = () => {
+    if(!callerId) return;
     peer.close();
     setCallState("idle");
     setCameraOn(false);
