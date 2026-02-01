@@ -459,9 +459,6 @@ function Page() {
     if(!callerId) return;
     peer.close();
     setCallState("idle");
-    setCameraOn(false);
-    setSpeakerOn(false);
-    setMicOn(true);
     setCall(false);
     setCallerId("");
     console.log("callerid",callerId , session?.user.internalId);
