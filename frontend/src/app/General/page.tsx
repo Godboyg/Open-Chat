@@ -848,6 +848,9 @@ function Page() {
 
     const acceptCall = async () => {
         if (!incomingOffer || !callerId) return;
+        setCameraOn(false);
+        setSpeakerOn(false);
+        setMicOn(true);
     
         setCallState("connected");
     
@@ -897,7 +900,9 @@ function Page() {
     
         if (callerId) {
           emit({ type: "call-end", to: callerId , session });
-        } 
+        } else {
+          emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
+        }
       }
  
   return (
