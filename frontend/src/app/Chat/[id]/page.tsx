@@ -361,6 +361,9 @@ function Page() {
     },[callState])
 
     const startCall = async () => {
+        setCameraOn(false);
+    setSpeakerOn(false);
+    setMicOn(true);
       setReplyTo("")
       setEdit("");
     setCallState("calling");
@@ -410,6 +413,9 @@ function Page() {
 
   const acceptCall = async () => {
     if (!incomingOffer || !callerId) return;
+      setCameraOn(false);
+    setSpeakerOn(false);
+    setMicOn(true);
 
     setCallState("connected");
 
@@ -463,8 +469,7 @@ function Page() {
     if (callerId) {
      emit({ type: "call-end", to: callerId , session });
     } else {
-      emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
-      return;
+     emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
     }
   }
 
