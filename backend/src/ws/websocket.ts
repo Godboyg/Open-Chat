@@ -224,8 +224,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                 { upsert: true }
              );
 
+          const found = await User.findOne({ uniqueUserId: data.from })
           if (receiver) {
-            const found = await User.findOne({ uniqueUserId: data.from })
             console.log("found",found);
 
             receiver.send(JSON.stringify({
@@ -238,7 +238,20 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               { isRead: true },
               { new: true }
             )
-          } 
+          } else {
+            const webPushSubscription = subscriptions.get(data.to) as PushSubscription;
+                if(webPushSubscription) {
+                  await sendPushNotification(webPushSubscription, {
+                    title: `Received-Friend-Request from ${found?.fullName}`,
+                    body: found?.fullName,
+                    data: {
+                      type: "Received-Request",
+                      from: found?.fullName
+                    },
+                    url: "/Notifications",
+                  })
+                }
+          }
           if(senderId) {
             senderId.send(JSON.stringify(
               { type: "request-sent" , senderNotification , 
