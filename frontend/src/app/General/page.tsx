@@ -984,43 +984,25 @@ function Page() {
                     )
                 }
             </div>
+            <div className={`flex items-center gap-2 border rounded-xl border-cyan-500 ${search ? "hidden" : "block"}`}
+            onClick={() => setSearch(!search)}>
+                <i className="ri-search-line"></i>
+                <span>Search</span>
+                </div>
             <div
         className={`
-          absolute
-          top-5
-          left-1/2
-          -translate-x-1/2
           cursor-pointer
-          rounded-xl
-          z-9999
           transition-all
           duration-500
           transform
           ease-in-out
           ${
             search
-              ? "w-full lg:w-[68%] bg-black/50 h-[80%] translate-y-10"
-              : "w-20 h-10 flex items-center justify-center -translate-y-2 bg-black/50 border border-cyan-700"
+              ? "w-[95%] rounded-xl z-9999 absolute top-5 left-1/2 -translate-x-1/2 lg:w-[68%] bg-black/50 h-[80%] translate-y-10"
+              : ""
           }
         `}
       >
-        <div
-          className={`
-            absolute inset-0
-            flex items-center justify-center gap-1
-            transition-opacity
-            duration-200
-            ${search ? "opacity-0 pointer-events-none" : "opacity-100 delay-300"}
-          `}
-          onClick={() => setSearch(!search)}
-        >
-          <div className="">
-            <i className="ri-search-line"></i>
-          </div>
-          <div className="">
-              Search
-          </div>
-        </div>
 
         <motion.div
           drag="y"
@@ -1406,7 +1388,7 @@ function Page() {
                     //  ref={constRef}
                       initial={{ width: 0, height: 0, opacity: 0, filter: "blur(10px)" }}
                       animate={{
-                        width: 350,
+                        width: 400,
                         height: 200,
                         filter: "blur(0px)",
                         opacity: 1,
