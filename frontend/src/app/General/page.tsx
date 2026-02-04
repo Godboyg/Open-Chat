@@ -2,7 +2,7 @@
 import React, { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import Dots from '../Components/Dots';
-import { motion , AnimatePresence } from 'motion/react';
+import { motion , AnimatePresence, easeIn } from 'motion/react';
 import { signOut } from 'next-auth/react';
 import { getSocket , subscribe , emit } from '@/lib/socket';
 import { timeAgo } from '@/lib/timeAgo';
@@ -113,9 +113,13 @@ function Page() {
     const [editTo , setEditTo] = useState<message | null>(null);
 
     const [dclik , setDClick] = useState(false);
-    // const [active , setActive] = useState(false);
+    const [searchName , setSearchName] = useState("");
+    const [searchNameLoading , setSearchNameLoading] = useState<boolean>(false);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const [result , setResult] = useState<any[]>([]);
     const [typing , setTyping] = useState<boolean>(false); 
     const profileRef = useRef<HTMLDivElement | null>(null);
+    const [search , setSearch] = useState<boolean>(false);
     // const [activeUsers , setActiveUsers] = useState<activeUsers[]>([])
     // const [allActiveUsers , setAllActiveUsers] = useState<string[]>([]);
     const [disabled, setDisabled] = useState<boolean>(false);
@@ -296,20 +300,6 @@ function Page() {
 
         document.addEventListener("mousedown",handleDown);
     },[])
-
-    const toggleSpeaker = () => {
-      const next = !speakerOn;
-
-      peer.toggleSpeaker(next);
-      setSpeakerOn(prev => !prev);
-
-      emit({
-        type: "speaker-state",
-        enabled: next,
-        to: otherUser.otherUser?.uniqueUserId,
-        session
-      });
-    };
 
     useEffect(() => {
         getSocket();
@@ -555,6 +545,20 @@ function Page() {
           (fnd: Friend) => fnd._id === currentProfile?.User_id
      );
 
+     const toggleSpeaker = () => {
+           const next = !speakerOn;
+     
+           peer.toggleSpeaker(next);
+           setSpeakerOn(prev => !prev);
+     
+           emit({
+             type: "speaker-state",
+             enabled: next,
+             to: otherUser.otherUser?.uniqueUserId,
+             session
+           });
+    };
+
     useEffect(() => {
         const store = async() => {
             const res = await axios.get("/api/app/user/friendship", {
@@ -754,11 +758,11 @@ function Page() {
         }
     }
 
-    const handleSendRequest = () => {
+    const handleSendRequest = (res: any) => {
         try{
             setDisabled(true);
             console.log("Request send");
-            emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id});
+            emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id || res.uniqueUserId});
         } catch(error) {
             console.log("Error",error);
         }
@@ -848,9 +852,6 @@ function Page() {
 
     const acceptCall = async () => {
         if (!incomingOffer || !callerId) return;
-        setCameraOn(false);
-        setSpeakerOn(false);
-        setMicOn(true);
     
         setCallState("connected");
     
@@ -860,7 +861,7 @@ function Page() {
         peer.addTracks();
         stream.getVideoTracks().forEach(t => (t.enabled = false));
     
-        // setStream(stream);
+        setStream(stream);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
@@ -876,7 +877,7 @@ function Page() {
     
         peer.onRemoteStream(stream => {
           if (remoteVideoRef.current) {
-            // setRemoteStream(stream);
+            setRemoteStream(stream);
             remoteVideoRef.current.srcObject = stream;
           }
         });
@@ -900,10 +901,42 @@ function Page() {
     
         if (callerId) {
           emit({ type: "call-end", to: callerId , session });
-        } else {
-          emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
-        }
+        } 
       }
+
+      const handleSearchName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchName(value);
+    setSearchNameLoading(true);
+
+    if(value.length === 0) {
+        setSearchNameLoading(false);
+    }
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(async () => {
+      if (!value.trim()) return;
+
+      try {
+        const res = await axios.get("/api/app/user/search", {
+            params: {
+                name: searchName
+            }
+        })
+        if(res.data.data) {
+           setResult(res.data.data);
+        }
+        console.log("res user name",res);
+      } catch (err) {
+        console.error("API error", err);
+      } finally {
+        setSearchNameLoading(false);
+      }
+    }, 500);
+  };
  
   return (
     <div className={`h-screen relative w-full ${mode ? "bg-black text-white" : "bg-white text-black"}`}>
@@ -922,7 +955,7 @@ function Page() {
                 )
             }
         </div>
-        <div className="py-2 px-3.5 flex items-center w-full">
+        <div className="py-2 px-3.5 flex items-center justify-between w-full">
             <div className="p-3 md:py-2.5 md:px-3.5 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
              bg-black shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]"
             onClick={handleMsgClick}>
@@ -938,7 +971,7 @@ function Page() {
                     ) : (
                         conversations.length > 0 && (
                          hasMessage ? (
-                          <div className="relative">
+                          <div className="relative bg-green-500">
                             <i className="ri-send-plane-line text-sm"></i>
                             <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
                             </div>
@@ -951,7 +984,156 @@ function Page() {
                     )
                 }
             </div>
-            <div className="absolute lg:top-[50%] top-[3%] right-[3%] lg:left-7 hover:bg-gray-800 transition duration-300 ease-in h-9 w-9 flex items-center justify-center rounded-full hover:cursor-pointer text-white"
+            <div
+        className={`
+          absolute
+          top-5
+          left-1/2
+          -translate-x-1/2
+          cursor-pointer
+          rounded-xl
+          z-9999
+          transition-all
+          duration-500
+          transform
+          ease-in-out
+          ${
+            search
+              ? "w-full lg:w-[68%] bg-black/50 h-[80%] translate-y-10"
+              : "w-20 h-10 flex items-center justify-center -translate-y-2 bg-black/50 border border-cyan-700"
+          }
+        `}
+      >
+        <div
+          className={`
+            absolute inset-0
+            flex items-center justify-center gap-1
+            transition-opacity
+            duration-200
+            ${search ? "opacity-0 pointer-events-none" : "opacity-100 delay-300"}
+          `}
+          onClick={() => setSearch(!search)}
+        >
+          <div className="">
+            <i className="ri-search-line"></i>
+          </div>
+          <div className="">
+              Search
+          </div>
+        </div>
+
+        <motion.div
+          drag="y"
+          dragSnapToOrigin
+          dragConstraints={{ top: 5 }}
+          onDragEnd={(e , info) => {
+            if(Math.abs(info.offset.x) > 10) {
+                setSearch(!search)
+            }
+          }}
+          className={`
+            absolute inset-0
+            transition-opacity
+            backdrop-blur-sm
+            flex flex-col
+            duration-200
+            px-4 py-2
+            ${search ? "opacity-100 delay-300" : "opacity-0 pointer-events-none"}
+          `}
+        >
+          <div className="w-full flex items-center justify-center">
+            <div className="w-8 h-1 rounded-xl bg-gray-600">
+            </div>
+          </div>
+          <div className="h-[10%] w-full px-3 flex rounded-xl border border-gray-600">
+            <div className="flex w-full items-center">
+                <input 
+                type="text" 
+                placeholder='Search' 
+                value={searchName}
+                onChange={handleSearchName}
+                className='flex-1 border-0 outline-none text-gray-300'/>
+                <div className="">
+                    {
+                        searchNameLoading ? (
+                           <div className="h-3 w-3 rounded-full border-2 border-black animate-spin border-t-cyan-500"></div>
+                        ) : (
+                            <i className="ri-close-circle-fill"
+                           onClick={() => setSearchName("")}></i>
+                        )
+                    }
+                </div>
+            </div>
+          </div>
+          <div className="h-[95%] flex flex-col gap-2 p-2 w-full overflow-auto">
+            <div className="font-bold text-gray-500">Result</div>
+            {
+                result.length > 0 ? (
+                    result.map((res, index) => {
+                        const matchedFriend = friend.find(
+                           (fnd: Friend) => fnd._id === res.uniqueUserId
+                         );
+                      return (
+                        <div className="p-2 bg-g flex items-center hover:bg-gray-900 justify-between rounded-xl w-full">
+                          <div className="flex items-center gap-2">
+                              <div className="relative">
+                                  <Image 
+                                    src={res?.image}
+                                    alt='user'
+                                    height={35}
+                                    width={35}
+                                    className='rounded-full object-cover'
+                                   />
+                                   <div className="absolute z-99 top-0 left-0">
+                                    {
+                                        allOnlineUsers?.includes(res.uniqueUserId) ? (
+                                            <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+                                        ) : (
+                                            <div className="">
+                                            </div>
+                                        )
+                                    }
+                                </div>
+                              </div>
+                              <div className="">
+                                  {res.fullName}
+                              </div>
+                          </div>
+                          <div className="">
+                            {
+                                res.uniqueUserId === session?.user.internalId ? (
+                                    <div className="px-4 py-2 bg-blue-700 text-gray-300 rounded-xl">
+                                        You
+                                    </div>
+                                ) : (
+                                    matchedFriend ? (
+                                    <div className="px-4 py-2 bg-blue-500 rounded-xl">
+                                        Friends
+                                    </div>
+                                ) : (
+                                    <div
+                                      className={`p-2 flex items-center justify-center rounded-xl hover:cursor-pointer
+                                        ${disabled ? "bg-blue-900 text-gray-700" : "bg-blue-600 text-gray-300"}`}
+                                      onClick={!disabled ? () => handleSendRequest(res) : undefined}
+                                    >
+                                      {disabled ? "Sent" : "Request"}
+                                    </div>
+                                )
+                                )
+                            }
+                          </div>
+                        </div>
+                      )})
+                ) : (
+                    <div className="text-center w-full">
+                        No user Found
+                    </div>
+                )
+            }
+          </div>
+        </motion.div>
+            </div>
+            <div className="hover:bg-gray-800 transition duration-300 ease-in h-9 w-9 flex items-center justify-center rounded-full hover:cursor-pointer text-white"
             onClick={() => {
                 router.push("/Notifications")
             }}>
@@ -1343,7 +1525,6 @@ function Page() {
 
   ) : (
     <div className="w-full flex items-center justify-center mt-3">
-
       {matchedFriend ? (
         <div
           className="w-[80%] bg-green-500 p-2 text-white rounded-md flex items-center justify-center hover:cursor-pointer"
@@ -1382,14 +1563,23 @@ function Page() {
             )
         }
         </AnimatePresence>
-        {
+        <AnimatePresence>
+            {
             open && (
                 <div className="h-screen w-full absolute top-0 left-0 backdrop-blur-2xl bg-opacity-50">
                     <motion.div
-                     initial={{ x: -50, width: 0 , height: "100vh"}}
-                     animate={{ x: 0 , width: screenSize ? "65vw" : "30vw", height: "100vh"}}
-                     transition={{ duration: 0.5 }}
+                     initial={{ x: -50, width: 0 , height: "100vh" , opacity: 0 , filter: "blur(5px)"}}
+                     animate={{ x: 0 , width: screenSize ? "65vw" : "30vw", height: "100vh" ,opacity: 1 , filter:"blur(0px)"}}
+                     transition={{ duration: 0.4 , ease: 'easeIn' }}
                      ref={containerRef}
+                     exit={{
+                        width: 10,
+                        filter: "blur(4px)",
+                        opacity: 0,
+                        transition:{
+                            duration: 0.4 , ease: "easeIn"
+                        }
+                     }}
                      className={`absolute z-99 top-0 ${mode === "light" ? "bg-white text-black" : "bg-black text-white"} shadow-cyan-500 shadow left-0 py-5 px-3 md:p-5`}
                      >
                          <div className="h-full flex flex-col justify-between">
@@ -1538,6 +1728,7 @@ function Page() {
                 </div>
             )
         }
+        </AnimatePresence>
     </div>
   )
 }
