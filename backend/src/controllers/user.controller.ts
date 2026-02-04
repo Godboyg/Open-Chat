@@ -127,3 +127,31 @@ export const friendShip = async({ query }: any) => {
         console.log("error",Error);
     }
 } 
+
+export const SearchUsers = async({ query }: any) => {
+    try{
+        const name = query.name;
+
+        if (!name) {
+          return {
+            success: false,
+            message: "Search name is required"
+          };
+        }
+
+        const users = await User.find({
+            fullName: { $regex: name, $options: "i" }
+        }).limit(10);
+
+        console.log("users ", users);
+
+        return {
+            success: true,
+            count: users.length,
+            data: users
+        }
+
+    } catch(error) {
+        console.log("error",error);
+    }
+}
