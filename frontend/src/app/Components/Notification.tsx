@@ -118,7 +118,8 @@ function Notification({ onIs , close , accepted }: props) {
                 pendingNotification.length > 0 && (
                   <div className="max-w-full">
                     {
-                      pendingNotification.map((pending) => (
+                      pendingNotification.map((pending) => 
+                        pending.message === "REQUEST_RECEIVED" && (
                         <div className="flex items-center gap-2 max-w-full px-3 py-1 bg-black shadow shadow-cyan-600">
                           <div className="text-lg font-semibold">
                             {pending.message}
