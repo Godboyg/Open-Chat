@@ -95,10 +95,12 @@ function Page() {
           try{
             // let subscription = await subscribeToPush(key ? key : "");
             emit({ type:"user-online", session });
-            emit({ type:"mark-n", session });
-            if(session?.user.internalId) {
-              dispatch(markAllRead(session?.user?.internalId));
-            } 
+            setTimeout(() => {
+              emit({ type:"mark-n", session });
+              if(session?.user.internalId) {
+                dispatch(markAllRead(session?.user?.internalId));
+              }
+            }, 3000) 
           } catch(err) {
             toast.error("pls refresh!");
           }
@@ -131,7 +133,8 @@ function Page() {
                         type: n.notify.type,
                         message: n.notify.message,
                         createdAt: n.notify.createdAt,
-                        read: true,
+                        read: n.notify.isRead,
+                        updatedAt: n.notify.updatedAt,
                         otherUser: {
                             image: n.otherUser?.image,
                             name: n.otherUser?.fullName,
