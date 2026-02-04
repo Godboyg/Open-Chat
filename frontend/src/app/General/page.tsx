@@ -115,6 +115,7 @@ function Page() {
     const [dclik , setDClick] = useState(false);
     const [searchName , setSearchName] = useState("");
     const [searchNameLoading , setSearchNameLoading] = useState<boolean>(false);
+    const [current , setCurrent] = useState<any>();
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const [result , setResult] = useState<any[]>([]);
     const [typing , setTyping] = useState<boolean>(false); 
@@ -760,6 +761,9 @@ function Page() {
 
     const handleSendRequest = (res: any) => {
         try{
+            if(res) {
+                setCurrent(res);
+            }
             setDisabled(true);
             console.log("Request send");
             emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id || res.uniqueUserId});
@@ -1098,7 +1102,9 @@ function Page() {
                                         ${disabled ? "bg-blue-900 text-gray-700" : "bg-blue-600 text-gray-300"}`}
                                       onClick={!disabled ? () => handleSendRequest(res) : undefined}
                                     >
-                                      {disabled ? "Sent" : "Request"}
+                                      {
+                                        current.uniqueUserId === res.uniqueUserId && disabled ? "Sent" : "Request"
+                                      }
                                     </div>
                                 )
                                 )
