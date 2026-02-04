@@ -200,14 +200,13 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                },
                {
                 $set: {
-                 isRead: false
+                 isRead: false,
+                  message: "REQUEST_SENT",
                 },
                 $setOnInsert: {
                   userId: data.from,
                   to: data.to,
                   type: "FRIEND_REQUEST",
-                  message: "REQUEST_SENT",
-                  isRead: false
                }
                },
                { upsert: true, new: true }
@@ -221,14 +220,13 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             },
             {
              $set: {
-               isRead: false
+               isRead: false,
+               message: "REQUEST_RECEIVED",
              },
              $setOnInsert: {
               userId: data.to,
               from: data.from,
               type: "FRIEND_REQUEST",
-              message: "REQUEST_RECEIVED",
-              isRead: false
              }
             },
             { upsert: true, new: true }
