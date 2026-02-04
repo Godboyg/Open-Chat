@@ -134,14 +134,14 @@ function Page() {
                         message: n.notify.message,
                         createdAt: n.notify.createdAt,
                         read: n.notify.isRead,
-                        updatedAt: n.notify.updatedAt,
                         otherUser: {
                             image: n.otherUser?.image,
                             name: n.otherUser?.fullName,
                             uniqueId: n.otherUser?.uniqueUserId,
                         },
                         notify: {
-                            createdAt: n.notify.createdAt
+                            createdAt: n.notify.createdAt,
+                            updatedAt: n.notify.updatedAt,
                         }
                     })) : [];
                     
@@ -216,6 +216,14 @@ function Page() {
                     
                           const showDateDivider = index === 0 || currentDate !== previousDate;
 
+                         const FIVE_MIN = 5 * 60 * 1000;
+
+                          const updatedAt = notify.notify?.updatedAt ? notify.notify?.updatedAt : "";
+
+                          const isFresh =
+                           !notify.read ||
+                            Date.now() - new Date(updatedAt).getTime() < FIVE_MIN;
+
                         return (
                             <>
                             <div className="px-1">
@@ -229,7 +237,9 @@ function Page() {
                                    </div>
                                  )}
                             </div>
-                            <div className="inline-flex items-center gap-4 rounded-lg w-full" key={index}>
+                            <div className={`
+                            ${isFresh ? "bg-blue-50 animate-pulse" : "bg-black/50"}
+                            inline-flex items-center gap-4 rounded-lg w-full`} key={index}>
                                 <div className="flex items-center w-full">
                                   <div className="">
                                     <Image 
