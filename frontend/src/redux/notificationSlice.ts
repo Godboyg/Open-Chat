@@ -21,6 +21,7 @@ export interface NotificationN {
   read: boolean;
   otherUser?: otherUser;
   notify?: notify;
+  updatedAt? : string;
 }
 
 interface NotificationState {
