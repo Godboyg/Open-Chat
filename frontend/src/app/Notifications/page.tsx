@@ -238,7 +238,7 @@ function Page() {
                                  )}
                             </div>
                             <div className={`
-                            ${isFresh ? "bg-blue-50 animate-pulse" : "bg-black/50"}
+                            ${isFresh ? "bg-gray-900 animate-pulse" : "bg-black/50"}
                             inline-flex items-center gap-4 rounded-lg w-full`} key={index}>
                                 <div className="flex items-center w-full">
                                   <div className="">
