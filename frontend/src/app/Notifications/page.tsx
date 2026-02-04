@@ -216,7 +216,7 @@ function Page() {
                     
                           const showDateDivider = index === 0 || currentDate !== previousDate;
 
-                         const FIVE_MIN = 5 * 60 * 1000;
+                         const FIVE_MIN = 1 * 60 * 1000;
 
                           const updatedAt = notify.notify?.updatedAt ? notify.notify?.updatedAt : "";
 
