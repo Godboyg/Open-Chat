@@ -1406,7 +1406,7 @@ function Page() {
                     //  ref={constRef}
                       initial={{ width: 0, height: 0, opacity: 0, filter: "blur(10px)" }}
                       animate={{
-                        width: "85%",
+                        width: 350,
                         height: 200,
                         filter: "blur(0px)",
                         opacity: 1,
