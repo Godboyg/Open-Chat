@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { friendShip , createUser, currentUser, deleteUser, getUsers, updateUser } from '../controllers/user.controller.js'
+import { friendShip , createUser, currentUser, deleteUser, getUsers, updateUser, SearchUsers } from '../controllers/user.controller.js'
 
 export const userRoute = new Elysia({ prefix: "/user" }) 
      .get("/all", getUsers)
