@@ -69,6 +69,7 @@ function Page() {
                 dispatch(removeFriendRequest({ to: data._id , from: data.from }))
                 console.log("u unfrnd the user", data.newFriend)
             } else if(data.type === "request-accepted") {
+               setisLoading(false);
                dispatch(addFriend({
                    _id: data._id,
                    status: data.status,
