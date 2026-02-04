@@ -195,6 +195,10 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                  type: "FRIEND_REQUEST"
                },
                {
+                $set: {
+                 isRead: false,
+                 message: "REQUEST_SENT"
+                },
                 $setOnInsert: {
                   userId: data.from,
                   to: data.to,
@@ -203,7 +207,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                   isRead: false
                }
                },
-               { upsert: true }
+               { upsert: true, new: true }
                );
 
           let notificationReceived = await notification.findOneAndUpdate(
@@ -213,6 +217,10 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                 type: "FRIEND_REQUEST"
               },
               {
+                $set: {
+                 isRead: false,
+                 message: "REQUEST_RECEIVED"
+                },
                 $setOnInsert: {
                   userId: data.to,
                   from: data.from,
@@ -221,7 +229,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                  isRead: false
                 }
                  },
-                { upsert: true }
+                { upsert: true , new: true}
              );
 
           const found = await User.findOne({ uniqueUserId: data.from })
@@ -251,7 +259,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                     url: "/Notifications",
                   })
                 }
-          }
+          } 
           if(senderId) {
             senderId.send(JSON.stringify(
               { type: "request-sent" , senderNotification , 
@@ -386,6 +394,22 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               new: true,
               upsert: true
             })
+
+          const found = await User.findOne({ uniqueUserId: data.to })
+
+            const webPushSubscription = subscriptions.get(data.from) as PushSubscription;
+                if(webPushSubscription) {
+                  await sendPushNotification(webPushSubscription, {
+                    title: `${found?.fullName} Accepted-Friend-Request`,
+                    body: found?.fullName,
+                    data: {
+                      type: "Request-Accepted",
+                      from: found?.fullName
+                    },
+                    url: "/Notifications",
+                  })
+                }
+
           }
           if(to) {
             to.send(JSON.stringify({ 
