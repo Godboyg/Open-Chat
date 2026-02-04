@@ -4,6 +4,7 @@ import { friendShip , createUser, currentUser, deleteUser, getUsers, updateUser 
 export const userRoute = new Elysia({ prefix: "/user" }) 
      .get("/all", getUsers)
      .get("/friendship", friendShip)
+     .get("/search", SearchUsers)
      .get("/current", currentUser)
      .post("/create", createUser)
      .delete("/delete", deleteUser)
