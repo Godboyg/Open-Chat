@@ -186,6 +186,10 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
              console.log("Friend request created");
            } else {
              console.log("Friend request already exists");
+             const socket = wsToUser.get(data.from);
+             if(socket) {
+              socket.send(JSON.stringify({ type: "request-exist" }))
+             }
              return;
            }
            let senderNotification = await notification.findOneAndUpdate(
