@@ -536,6 +536,8 @@ function Page() {
                        createdId: data.msg.createdAt
                    }
                  }));
+             } else if (data.type === "request-exist") {
+                toast.error("request already exist");
              }
         })
 
@@ -1099,11 +1101,11 @@ function Page() {
                                 ) : (
                                     <div
                                       className={`p-2 flex items-center justify-center rounded-xl hover:cursor-pointer
-                                        ${disabled ? "bg-blue-900 text-gray-700" : "bg-blue-600 text-gray-300"}`}
+                                        ${disabled && current?.uniqueUserId === res?.uniqueUserId ? "bg-blue-900 text-gray-700" : "bg-blue-600 text-gray-300"}`}
                                       onClick={!disabled ? () => handleSendRequest(res) : undefined}
                                     >
                                       {
-                                        current.uniqueUserId === res.uniqueUserId && disabled ? "Sent" : "Request"
+                                        current?.uniqueUserId === res?.uniqueUserId && disabled ? "Sent" : "Request"
                                       }
                                     </div>
                                 )
