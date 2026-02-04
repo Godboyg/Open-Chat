@@ -200,8 +200,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                },
                {
                 $set: {
-                 isRead: false,
-                 message: "REQUEST_SENT"
+                 isRead: false
                 },
                 $setOnInsert: {
                   userId: data.from,
@@ -215,26 +214,25 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                );
 
           let notificationReceived = await notification.findOneAndUpdate(
-              {
-                userId: data.to,
-                from: data.from,
-                type: "FRIEND_REQUEST"
-              },
-              {
-                $set: {
-                 isRead: false,
-                 message: "REQUEST_RECEIVED"
-                },
-                $setOnInsert: {
-                  userId: data.to,
-                  from: data.from,
-                  type: "FRIEND_REQUEST",
-                  message: "REQUEST_RECEIVED",
-                 isRead: false
-                }
-                 },
-                { upsert: true , new: true}
-             );
+             {
+              userId: data.to,
+             from: data.from,
+              type: "FRIEND_REQUEST"
+            },
+            {
+             $set: {
+               isRead: false
+             },
+             $setOnInsert: {
+              userId: data.to,
+              from: data.from,
+              type: "FRIEND_REQUEST",
+              message: "REQUEST_RECEIVED",
+              isRead: false
+             }
+            },
+            { upsert: true, new: true }
+           );
 
           const found = await User.findOne({ uniqueUserId: data.from })
           if (receiver) {
