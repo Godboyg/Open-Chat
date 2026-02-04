@@ -1131,7 +1131,7 @@ function Page() {
                 {
                     items.length > 0 && items.map((itm , index) => (
                         itm.read !== true && (
-                            <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500"
+                            <div className="absolute top-0 right-0 h-5 w-5 rounded-full bg-red-500"
                             key={index}>
                               <div className="w-full h-full flex items-center justify-center text-sm">
                                {items.length}                        
