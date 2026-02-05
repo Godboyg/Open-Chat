@@ -5,7 +5,7 @@ import 'remixicon/fonts/remixicon.css'
 import { getSocket, subscribe , emit } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
 import { addMessage, markMessagesRead, removeMessage, setMessages, updateMessage } from '@/redux/messageSlice';
-import { updateLastMessage } from '@/redux/conversationSlice';
+import { seenLastMessage, updateLastMessage } from '@/redux/conversationSlice';
 import { Suspense } from "react";
 import axios from 'axios';
 import Image from 'next/image';
@@ -131,11 +131,13 @@ function Page() {
             } else if(data.type === "msg-seen"){
                 console.log("seen", data.msg);
                 dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
-                setTyping(false)
+                dispatch(seenLastMessage({ conversationId: activeId || chatid }));
+                setTyping(false);
             } else if(data.type === "now-seen"){
-                console.log("now seen just", data.unReadMsg)
+                console.log("now seen just", data.unReadMsg);
                 dispatch(markMessagesRead({ conversationId: activeId || chatid, userId: data.senderId }))
-                setTyping(false)
+                dispatch(seenLastMessage({ conversationId: activeId || chatid }));
+                setTyping(false);
             } else if(data.type === "unread-msg") {
                 console.log("un read msg",data.unReadMsg);
                 emit({ type: "now seen" , activeId: activeId || chatid , senderId: data.senderId})
@@ -148,6 +150,7 @@ function Page() {
             } else if(data.type === "seen-now") {
                 console.log("seen just now");
                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
+               dispatch(seenLastMessage({ conversationId: data.activeId }))
             } else if(data.type === "cannot-msg") {
                 setNotFriend(true);
                 console.log("user rejected the request");
@@ -297,7 +300,7 @@ function Page() {
                     lastMessage: {
                         text: msg,
                         senderId: session?.user.internalId,
-                        createdId: Date.now()
+                        createdId: Date.now(),
                     }
                 }))
             }
@@ -347,13 +350,10 @@ function Page() {
 
     useEffect(() => {
         const timer =  setTimeout(() => {
-            if(callState !== "connected" && peer && callerId) {
+            if(callState !== "connected") {
                setCall(false);
                setCallState("idle");
                toast.error("not answering");
-                if(peer) {
-                    peer.close();
-                }
             }
         },10000)
 
@@ -361,9 +361,6 @@ function Page() {
     },[callState])
 
     const startCall = async () => {
-        setCameraOn(false);
-    setSpeakerOn(false);
-    setMicOn(true);
       setReplyTo("")
       setEdit("");
     setCallState("calling");
@@ -413,9 +410,6 @@ function Page() {
 
   const acceptCall = async () => {
     if (!incomingOffer || !callerId) return;
-      setCameraOn(false);
-    setSpeakerOn(false);
-    setMicOn(true);
 
     setCallState("connected");
 
@@ -459,6 +453,9 @@ function Page() {
     if(!callerId) return;
     peer.close();
     setCallState("idle");
+    setCameraOn(false);
+    setSpeakerOn(false);
+    setMicOn(true);
     setCall(false);
     setCallerId("");
     console.log("callerid",callerId , session?.user.internalId);
@@ -466,7 +463,8 @@ function Page() {
     if (callerId) {
      emit({ type: "call-end", to: callerId , session });
     } else {
-     emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
+      emit({ type:"call-end", to: otherUser.otherUser?.uniqueUserId , session });
+      return;
     }
   }
 
