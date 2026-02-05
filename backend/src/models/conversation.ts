@@ -23,6 +23,9 @@ const conversationSchema = new mongoose.Schema({
         },
         createdId: {
             type: Date
+        },
+        isRead: {
+            type: Boolean
         }
     },
     updatedAt: {
