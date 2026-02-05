@@ -1006,7 +1006,7 @@ function Page() {
           ease-in-out
           ${
             search
-              ? "w-full rounded-xl absolute top-0 left-0 backdrop-blur-sm z-9999 lg:w-[68%] h-screen"
+              ? "w-full rounded-xl absolute top-0 left-0 lg:left-1/2 lg:-translate-x-1/2 backdrop-blur-sm z-9999 lg:w-[68%] h-screen"
               : ""
           }
         `}>
