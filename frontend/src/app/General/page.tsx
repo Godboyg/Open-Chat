@@ -27,7 +27,6 @@ import { formatLastActive } from '@/lib/LastActive';
 import { subscribeToPush } from '@/lib/push';
 import peer from '@/webrtc/peer';
 import Call from '../Components/Call';
-import AbsoluteExpand from '../Components/AbsoluteExpand';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
