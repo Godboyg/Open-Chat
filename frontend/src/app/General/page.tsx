@@ -27,6 +27,7 @@ import { formatLastActive } from '@/lib/LastActive';
 import { subscribeToPush } from '@/lib/push';
 import peer from '@/webrtc/peer';
 import Call from '../Components/Call';
+import AbsoluteExpand from '../Components/AbsoluteExpand';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -765,6 +766,7 @@ function Page() {
         try{
             if(res) {
                 setCurrent(res);
+                console.log("res current",res, current);
             }
             setDisabled(true);
             console.log("Request send");
@@ -990,11 +992,12 @@ function Page() {
                     )
                 }
             </div>
-            <div className={`flex items-center gap-2 border rounded-xl border-cyan-500 ${search ? "hidden" : "block"}`}
+            <div className={`flex items-center shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)] gap-1 p-1 hover:cursor-pointer rounded-xl 
+            `}
             onClick={() => setSearch(!search)}>
                 <i className="ri-search-line"></i>
                 <span>Search</span>
-                </div>
+            </div>
             <div
         className={`
           cursor-pointer
@@ -1004,12 +1007,10 @@ function Page() {
           ease-in-out
           ${
             search
-              ? "w-[95%] rounded-xl z-9999 absolute top-5 left-1/2 -translate-x-1/2 lg:w-[68%] bg-black/50 h-[80%] translate-y-10"
+              ? "w-full rounded-xl absolute top-0 left-0 backdrop-blur-sm z-9999 lg:w-[68%] h-screen"
               : ""
           }
-        `}
-      >
-
+        `}>
         <motion.div
           drag="y"
           dragSnapToOrigin
@@ -1022,11 +1023,11 @@ function Page() {
           className={`
             absolute inset-0
             transition-opacity
-            backdrop-blur-sm
             flex flex-col
-            duration-200
+            duration-400
+            shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]
             px-4 py-2
-            ${search ? "opacity-100 delay-300" : "opacity-0 pointer-events-none"}
+            ${search ? "opacity-100 delay-300 z-9999 backdrop-blur-md" : "opacity-0 pointer-events-none hidden z-0 "}
           `}
         >
           <div className="w-full flex items-center justify-center">
@@ -1642,9 +1643,17 @@ function Page() {
                                                                                     <span className='h-1 w-1 rounded-full bg-gray-500'></span>
                                                                                     <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
                                                                                 </div>
-                                                                                : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
+                                                                                : <small className='font-light absolute top-5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
-                                                                                        <small className="">Sent</small>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="">
+                                                                                                {
+                                                                                                    convo.convo.lastMessage?.isRead && convo.convo.lastMessage.senderId === session?.user.internalId ?
+                                                                                                    <span className='text-gray-300 tracking-widest'>Seen</span>
+                                                                                                    : <small className="">Sent</small>
+                                                                                                }
+                                                                                            </div>
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
                                                                                     )
