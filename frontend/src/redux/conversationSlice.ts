@@ -4,6 +4,7 @@ export type lastM = {
   text: string,
   senderId: string,
   createdId: Date | string
+  isRead: boolean;
 }
 
 export type convo = {
@@ -75,6 +76,16 @@ const conversationSlice = createSlice({
       });
     },
 
+    seenLastMessage(state , action: PayloadAction<{ conversationId: string; }>) {
+      const { conversationId } = action.payload;
+      if (!state.byId[conversationId]) return;
+
+      const convo = state.byId[conversationId];
+      if (!convo?.convo.lastMessage) return;
+
+      convo.convo.lastMessage.isRead = true;
+    },
+    
     updateLastMessage(
       state,
       action: PayloadAction<{ conversationId: string; lastMessage: any }>
@@ -99,6 +110,7 @@ export const {
   upsertConversation,
   setActiveConversation,
   updateLastMessage,
+  seenLastMessage,
   setConversations,
   resetConversations,
 } = conversationSlice.actions;
