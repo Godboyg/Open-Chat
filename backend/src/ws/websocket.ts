@@ -201,7 +201,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                {
                 $set: {
                  isRead: false,
-                  message: "REQUEST_SENT",
+                 message: "REQUEST_SENT"
                 },
                 $setOnInsert: {
                   userId: data.from,
@@ -213,24 +213,24 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                );
 
           let notificationReceived = await notification.findOneAndUpdate(
-             {
-              userId: data.to,
-             from: data.from,
-              type: "FRIEND_REQUEST"
-            },
-            {
-             $set: {
-               isRead: false,
-               message: "REQUEST_RECEIVED",
-             },
-             $setOnInsert: {
-              userId: data.to,
-              from: data.from,
-              type: "FRIEND_REQUEST",
-             }
-            },
-            { upsert: true, new: true }
-           );
+              {
+                userId: data.to,
+                from: data.from,
+                type: "FRIEND_REQUEST"
+              },
+              {
+                $set: {
+                 isRead: false,
+                 message: "REQUEST_RECEIVED"
+                },
+                $setOnInsert: {
+                  userId: data.to,
+                  from: data.from,
+                  type: "FRIEND_REQUEST",
+                }
+                 },
+                { upsert: true , new: true}
+             );
 
           const found = await User.findOne({ uniqueUserId: data.from })
           if (receiver) {
@@ -409,7 +409,6 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                     url: "/Notifications",
                   })
                 }
-
           }
           if(to) {
             to.send(JSON.stringify({ 
@@ -675,6 +674,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
         } else if(data.type === "now seen") {
           try{
             const socket = wsToUser.get(data.senderId);
+            
             if(socket) {
               console.log("socket is there", data.senderId);
               socket.send(JSON.stringify({ type: "seen-now" , activeId: data.activeId , senderId: data.senderId }));
@@ -757,6 +757,17 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           try{
             console.log("data",data.msg);
             const socket = wsToUser.get(data.msg.senderId);
+            await conversation.findByIdAndUpdate(
+                data.activeId,
+                {
+                  lastMessage: {
+                    text: data.msg.text,
+                    senderId: data.msg.senderId,
+                    createdId: Date.now(),
+                    isRead: true
+                  }
+                }
+              )
             if(socket) {
               socket.send(JSON.stringify({ type: "msg-seen" , msg: data.msg }))
             }
