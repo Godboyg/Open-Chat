@@ -3,8 +3,8 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export type lastM = {
   text: string,
   senderId: string,
-  createdId: Date | string
-  isRead: boolean;
+  createdAt: Date,
+  isRead?: boolean;
 }
 
 export type convo = {
@@ -31,6 +31,7 @@ interface ConversationState {
   byId: Record<string, Conversation>;
   allIds: string[];
   activeId: string | null;
+  seenTime?: Date | undefined;
 }
 
 const initialState: ConversationState = {
@@ -55,6 +56,11 @@ const conversationSlice = createSlice({
       }
     },
 
+    setInfo(state , action: PayloadAction<Date | undefined>) {
+      if(!action.payload) return;
+      state.seenTime = action.payload
+    },
+
     setActiveConversation(
       state,
       action: PayloadAction<string | null>
@@ -76,6 +82,21 @@ const conversationSlice = createSlice({
       });
     },
 
+    updateLastMessage(
+      state,
+      action: PayloadAction<{ conversationId: string; lastMessage: any}>
+    ) {
+      const { conversationId, lastMessage } = action.payload;
+      if (!state.byId[conversationId]) return;
+
+      state.byId[conversationId].convo.lastMessage = lastMessage;
+      
+      state.allIds = [
+        conversationId,
+        ...state.allIds.filter(id => id !== conversationId),
+      ];
+    },
+
     seenLastMessage(state , action: PayloadAction<{ conversationId: string; }>) {
       const { conversationId } = action.payload;
       if (!state.byId[conversationId]) return;
@@ -84,20 +105,6 @@ const conversationSlice = createSlice({
       if (!convo?.convo.lastMessage) return;
 
       convo.convo.lastMessage.isRead = true;
-    },
-    
-    updateLastMessage(
-      state,
-      action: PayloadAction<{ conversationId: string; lastMessage: any }>
-    ) {
-      const { conversationId, lastMessage } = action.payload;
-      if (!state.byId[conversationId]) return;
-
-      state.byId[conversationId].convo.lastMessage = lastMessage;
-      state.allIds = [
-        conversationId,
-        ...state.allIds.filter(id => id !== conversationId),
-      ];
     },
 
     resetConversations() {
@@ -112,6 +119,7 @@ export const {
   updateLastMessage,
   seenLastMessage,
   setConversations,
+  setInfo,
   resetConversations,
 } = conversationSlice.actions;
 
