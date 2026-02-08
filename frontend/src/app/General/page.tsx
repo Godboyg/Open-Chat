@@ -20,13 +20,15 @@ import { setOnlineCount, setUserOnline } from '@/redux/themeSlice';
 import axios from 'axios';
 import Notification from '../Components/Notification';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
-import { Conversation, setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
+import { Conversation, seenLastMessage, setActiveConversation, setConversations, setInfo, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
 import { addNotification } from '@/redux/notificationSlice';
-import { addMessage } from '@/redux/messageSlice';
+import { addMessage, markMessagesRead } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 import { subscribeToPush } from '@/lib/push';
 import peer from '@/webrtc/peer';
 import Call from '../Components/Call';
+import { connection } from 'next/server';
+import { convertSegmentPathToStaticExportFilename } from 'next/dist/shared/lib/segment-cache/segment-value-encoding';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -533,12 +535,24 @@ function Page() {
                    lastMessage: {
                        text: data.msg.text,
                        senderId: data.msg.senderId,
-                       createdId: data.msg.createdAt
+                       createdAt: data.msg.createdAt,
+                       isRead: true
                    }
                  }));
              } else if (data.type === "request-exist") {
                 toast.error("request already exist");
-             }
+             } else if(data.type === "seen-now") {
+                console.log("seen just now",data);
+                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            } else if(data.type === "msg-seen"){
+                console.log("seen", data.msg);
+                 let time = new Date();
+                dispatch(setInfo(time));
+                 dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.msg.conversationId }));
+                setTyping(false);
+            }
         })
 
         return () => unsubscribe()
@@ -1602,7 +1616,8 @@ function Page() {
                                                               <div className="flex relative hover:cursor-pointer items-center justify-between px-2 py-0.5 rounded-md gap-2 w-full"
                                                               key={index}
                                                               onClick={() => {
-                                                                dispatch(setActiveConversation(convo.convo._id))
+                                                                dispatch(setActiveConversation(convo.convo._id));
+                                                                dispatch(setInfo(convo.convo.lastMessage?.createdAt));
                                                                 router.push(`/Chat/${convo.convo._id}`);
                                                               }}>
                                                                 <div className="flex items-center gap-2">
@@ -1640,7 +1655,7 @@ function Page() {
                                                                                 ? <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
                                                                                     <small className='font-light truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
                                                                                     <span className='h-1 w-1 rounded-full bg-gray-500'></span>
-                                                                                    <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                    <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdAt)}</small>
                                                                                 </div>
                                                                                 : <small className='font-light absolute top-5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
@@ -1648,13 +1663,27 @@ function Page() {
                                                                                             <div className="">
                                                                                                 {
                                                                                                     convo.convo.lastMessage?.isRead && convo.convo.lastMessage.senderId === session?.user.internalId ?
-                                                                                                    <span className='text-gray-300 tracking-widest'>Seen</span>
+                                                                                                    <div className="flex items-center gap-1.5">
+                                                                                                        <span className='text-gray-300 tracking-widest'>Seen</span>
+                                                                                                        <span>{timeAgo(convo.convo.lastMessage?.createdAt)}</span>
+                                                                                                    </div>
                                                                                                     : <small className="">Sent</small>
                                                                                                 }
                                                                                             </div>
                                                                                         </div>
                                                                                     ) : (
-                                                                                        <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                        (
+                                                                                            convo.convo.lastMessage?.isRead && convo.convo.lastMessage.senderId === session?.user.internalId ? (
+                                                                                               <div className="flex items-center gap-1">
+                                                                                                 <span className="text-gray-300 tracking-widest">
+                                                                                                   Seen
+                                                                                                 </span>
+                                                                                                <span>{timeAgo(convo.convo.lastMessage?.createdAt)}</span>
+                                                                                               </div>
+                                                                                            ): (
+                                                                                                <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                            ) 
+                                                                                        )
                                                                                     )
                                                                                 }</small>
                                                                             ) : (
@@ -1664,7 +1693,7 @@ function Page() {
                                                                                          <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
                                                                                            <small className='font-bold truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
                                                                                            <span className='h-1 w-1 rounded-full bg-gray-500'></span>
-                                                                                           <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                           <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdAt)}</small>
                                                                                          </div>
                                                                                          : (
                                                                                             convo.message && convo.message > 4 ? (
