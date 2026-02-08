@@ -21,7 +21,7 @@ const conversationSchema = new mongoose.Schema({
         senderId: {
             type: String
         },
-        createdId: {
+        createdAt: {
             type: Date
         },
         isRead: {
