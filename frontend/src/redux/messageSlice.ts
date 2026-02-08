@@ -11,7 +11,6 @@ export interface reply {
   name?: string | undefined | null;
   senderId: string;
   text: string;
-  // date: Date | number | string;
 }
 
 export interface Message {
@@ -23,6 +22,7 @@ export interface Message {
   reply?: reply;
   edited?: boolean;
   // name: string;
+  time?: Date;
   createdAt?: Date | number | string;
   status?: "sent" | "read";
   deliveryStatus?: DeliveryStatus;
@@ -96,6 +96,7 @@ const messageSlice = createSlice({
      messages.forEach((msg) => {
       if(msg.senderId === userId) {
         msg.status = "read"
+        msg.time = new Date()
       }
      })
    },
