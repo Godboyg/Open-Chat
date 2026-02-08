@@ -5,7 +5,7 @@ import 'remixicon/fonts/remixicon.css'
 import { getSocket, subscribe , emit } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
 import { addMessage, markMessagesRead, removeMessage, setMessages, updateMessage } from '@/redux/messageSlice';
-import { seenLastMessage, updateLastMessage } from '@/redux/conversationSlice';
+import { seenLastMessage, setInfo, updateLastMessage } from '@/redux/conversationSlice';
 import { Suspense } from "react";
 import axios from 'axios';
 import Image from 'next/image';
@@ -21,6 +21,7 @@ import peer from '@/webrtc/peer';
 import Call from '@/app/Components/Call';
 import Delete from '@/app/Components/Delete';
 import { Toaster } from 'react-hot-toast';
+import { timeAgo } from '@/lib/timeAgo';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 type CallState = "idle" | "calling" | "ringing" | "connected";
@@ -65,6 +66,16 @@ function Page() {
      const allOnlineUsers = useAppSelector((state) => state.theme.users);
      const lastMessage = messages.at(-1);
      console.log("jhaevf",lastMessage);
+
+     const conversations = useAppSelector(state =>
+      state.conversations.allIds.map(
+          id => state.conversations.byId[id]
+      )
+    );
+
+    const seenTime = useAppSelector((state) => state.conversations.seenTime);
+
+    console.log("cons",conversations);
 
     console.log("messages",messages);
 
@@ -112,14 +123,15 @@ function Page() {
                   lastMessage: {
                       text: data.msg.text,
                       senderId: data.msg.senderId,
-                      createdId: data.msg.createdAt
+                      createdAt: data.msg.createdAt,
+                      isRead: true
                   }
                 }));
             } else if(data.type === "Typing") {
                 setTyping(true);
                 setTimeout(() => {
                     setTyping(false)
-                },2000)
+                },3000)
             } else if(data.type === "Typing-stop") {
                 setTyping(false);
             } else if(data.type === "ONLINE_USERS"){
@@ -130,6 +142,8 @@ function Page() {
                 console.log("data.payload.after",data.users)
             } else if(data.type === "msg-seen"){
                 console.log("seen", data.msg);
+                let time = new Date();
+                dispatch(setInfo(time));
                 dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
                 dispatch(seenLastMessage({ conversationId: activeId || chatid }));
                 setTyping(false);
@@ -140,7 +154,8 @@ function Page() {
                 setTyping(false);
             } else if(data.type === "unread-msg") {
                 console.log("un read msg",data.unReadMsg);
-                emit({ type: "now seen" , activeId: activeId || chatid , senderId: data.senderId})
+                const lastMessage = data.unReadMsg.at(-1);
+                emit({ type: "now seen" , activeId: activeId || chatid , senderId: data.senderId , lastMessage})
                 if(data.unReadMsg.length > 0){
                     dispatch(setMessages({
                      conversationId: activeId ? activeId : chatid,
@@ -149,6 +164,8 @@ function Page() {
                 }
             } else if(data.type === "seen-now") {
                 console.log("seen just now");
+                let time = new Date();
+                dispatch(setInfo(time));
                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
                dispatch(seenLastMessage({ conversationId: data.activeId }))
             } else if(data.type === "cannot-msg") {
@@ -157,9 +174,10 @@ function Page() {
             } else if(data.type === "cannot-msg-add") {
                 setNotFriend(true);
                 console.log("add first then u can msg");
+                toast.error("Accept Request");
             } else if(data.type === "user-there") {
                 try{
-                    setUser(true)
+                    setUser(true);
                 } catch(error) {
                     console.log("error",error)
                 }
@@ -300,7 +318,7 @@ function Page() {
                     lastMessage: {
                         text: msg,
                         senderId: session?.user.internalId,
-                        createdId: Date.now(),
+                        createdAt: Date.now(),
                     }
                 }))
             }
@@ -319,10 +337,6 @@ function Page() {
        chatRef.current.scrollTop = chatRef.current.scrollHeight;
      }
    }, [messages]);
-
-    useEffect(() => {
-        emit({ type: "Typing" , activeId: activeId || chatid , session });
-    },[msg])
 
     useEffect(() => {
     //  if (!activeId || !chatid) return;
@@ -478,7 +492,7 @@ function Page() {
                 emit({ type: "Typing" , activeId: activeId || chatid , session})
               setTimeout(() => {
                 emit({ type:"Typing-stop" , activeId: activeId || chatid , session})
-              }, 3000);
+              }, 4000);
             }
         } catch(error) {
             console.log("error",error);
@@ -561,7 +575,7 @@ function Page() {
               </AnimatePresence>
             }
             <div 
-              className="w-full h-[80%] overflow-auto flex flex-col gap-2"
+              className="w-full h-[82%] overflow-auto flex flex-col gap-2"
               ref={chatRef}
             >
                 <Suspense fallback={<p>Loading.....</p>}>
@@ -715,13 +729,15 @@ function Page() {
                 </Suspense>
                 {
                     isSeen && lastMessage.senderId === session?.user.internalId ? (
-                        <div className="w-full text-end text-red-500">
-                            Seen
+                        <div className="w-full transition-all duration-150 ease-in flex justify-end gap-1.5 text-gray-300">
+                            <small>Seen</small>
+                            <small>{timeAgo(seenTime)}</small>
                         </div>
                     ) : (
                        lastMessage?.senderId === session?.user.internalId && lastMessage?.status === "read" && (
-                            <div className="w-full text-end">
-                                Seen
+                            <div className="w-full flex transition-all duration-150 ease-in justify-end items-center gap-1.5">
+                                <small>Seen</small>
+                                <small>{timeAgo(seenTime)}</small>
                             </div>
                         )
                     )
