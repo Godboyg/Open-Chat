@@ -9,9 +9,10 @@ import { getSocket , subscribe , emit } from '@/lib/socket';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
-import { upsertConversation } from '@/redux/conversationSlice';
+import { seenLastMessage, setInfo, upsertConversation } from '@/redux/conversationSlice';
 import { motion } from "motion/react";
 import { subscribeToPush } from '@/lib/push';
+import { markMessagesRead } from '@/redux/messageSlice';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -68,14 +69,26 @@ function Page() {
                 }))
                 dispatch(removeFriendRequest({ to: data._id , from: data.from }))
                 console.log("u unfrnd the user", data.newFriend)
-            } else if(data.type === "request-accepted") {
+            }else if(data.type === "msg-seen"){
+                console.log("seen", data.msg);
+                let time = new Date();
+                dispatch(setInfo(time));
+                dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            } 
+            else if(data.type === "seen-now") {
+                console.log("seen just now",data);
+                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            }
+            else if(data.type === "request-accepted") {
                setisLoading(false);
                dispatch(addFriend({
                    _id: data._id,
                    status: data.status,
                    conversationId: data.conversationId
                }));
-               console.log(data._id , data);
+               console.log("requesdt",data._id , data);
                dispatch(removeFriendRequest({ to: data._id , from: data.from }));
                const upsert = {
                    convo : {
@@ -134,14 +147,14 @@ function Page() {
                         message: n.notify.message,
                         createdAt: n.notify.createdAt,
                         read: n.notify.isRead,
+                        updatedAt: n.notify.updatedAt,
                         otherUser: {
-                            image: n.otherUser?.image,
-                            name: n.otherUser?.fullName,
-                            uniqueId: n.otherUser?.uniqueUserId,
+                            image: n.otherUser.image,
+                            name: n.otherUser.fullName,
+                            uniqueId: n.otherUser.uniqueUserId,
                         },
                         notify: {
-                            createdAt: n.notify.createdAt,
-                            updatedAt: n.notify.updatedAt,
+                            createdAt: n.notify.createdAt
                         }
                     })) : [];
                     
@@ -216,7 +229,7 @@ function Page() {
                     
                           const showDateDivider = index === 0 || currentDate !== previousDate;
 
-                         const FIVE_MIN = 1 * 60 * 1000;
+                          const FIVE_MIN = 1 * 60 * 1000;
 
                           const updatedAt = notify.notify?.updatedAt ? notify.notify?.updatedAt : "";
 
@@ -239,7 +252,7 @@ function Page() {
                             </div>
                             <div className={`
                             ${isFresh ? "bg-gray-900 animate-pulse" : "bg-black/50"}
-                            inline-flex items-center gap-4 rounded-lg w-full`} key={index}>
+                              inline-flex items-center gap-4 rounded-lg w-full`} key={index}>
                                 <div className="flex items-center w-full">
                                   <div className="">
                                     <Image 
