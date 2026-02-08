@@ -576,7 +576,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                   lastMessage: {
                     text: data.text,
                     senderId: data.senderId,
-                    createdId: Date.now()
+                    createdAt: Date.now(),
+                    isRead: false
                   }
                 }
               )
@@ -608,8 +609,8 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
            }
         } else if(data.type === "msg read"){
           try{
-            console.log("in");
-            console.log("hello");
+            console.log("in!!!!!1");
+            console.log("hello!!!!!!11");
 
             await Message.updateMany(
               { conversationId: data.activeId,
@@ -632,23 +633,31 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
           }
         } else if(data.type === "msg read online"){
           try{
-            console.log("in side");
+            console.log("in side!!!!!!!!!!!!!!!!", data.activeId);
             const areFriends = await friend.findOne({
               conversationId: data.activeId
             })
+            console.log("arefrnd",areFriends);
             if(areFriends && areFriends.status === "accepted") {
               const convo = await conversation.findById(data.activeId);
               var parts;
               if(convo) {
                 parts = convo.participents;
               }
+              console.log("parts",parts);
             const unReadMsg = await Message.find({
               conversationId: data.activeId,
-              // [`deliveryStatus.${data.session.user.internalId}`]: "read"
+              // $or: [
+              //   {
+              //     [`deliveryStatus.${data.session.user.internalId}`]: "sent"
+              //   },{
+              //     [`deliveryStatus.${data.session.user.internalId}`]: "delivered"
+              //   }
+              // ]
             })
-
             console.log(unReadMsg.length);
             const last = unReadMsg[unReadMsg.length - 1];
+            console.log("last",last);
 
             for(const p of parts) {
               if(p === data?.session?.user?.internalId && p !== convo.lastMessage.senderId){
@@ -663,9 +672,11 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
               const soc = wsToUser.get(areFriends.requester);
               if(socket) {
                 socket.send(JSON.stringify({ type:"cannot-msg-add" }))
+                return;
               }
               if(soc) {
-                soc.send({ type:"cannot-msg" })
+                soc.send(JSON.stringify({ type:"cannot-msg" }))
+                return;
               }
             }
           } catch(error) {
@@ -677,6 +688,22 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
             
             if(socket) {
               console.log("socket is there", data.senderId);
+
+              await conversation.findOneAndUpdate(
+                {
+                 _id: data.activeId,
+                 "lastMessage.isRead": false
+                },
+                {
+                  lastMessage: {
+                    text: data.lastMessage.text,
+                    senderId: data.lastMessage.senderId,
+                    createdAt: Date.now(),
+                    isRead: true
+                  }
+                }
+              )
+
               socket.send(JSON.stringify({ type: "seen-now" , activeId: data.activeId , senderId: data.senderId }));
             }
           } catch(error) {
@@ -763,7 +790,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                   lastMessage: {
                     text: data.msg.text,
                     senderId: data.msg.senderId,
-                    createdId: Date.now(),
+                    createdAt: Date.now(),
                     isRead: true
                   }
                 }
