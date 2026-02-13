@@ -517,7 +517,7 @@ function Page() {
                  console.log("new message", data.msg);
                  setPMsg((prev) => [...prev, data.msg]);
                  dispatch(addMessage({
-                  _id: crypto.randomUUID(),
+                  _id: data.msg.clientMessageId,
                   conversationId: data.msg.conversationId,
                   senderId: data.msg.senderId,
                   text: data.msg.text,
