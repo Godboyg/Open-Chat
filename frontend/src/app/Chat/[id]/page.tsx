@@ -105,7 +105,7 @@ function Page() {
                 console.log("in the page/room");
                 console.log("msg", data);
                 dispatch(addMessage({
-                 _id: crypto.randomUUID(),
+                 _id: data.msg.clientMessageId,
                  conversationId: data.msg.conversationId,
                  senderId: data.msg.senderId,
                  text: data.msg.text,
