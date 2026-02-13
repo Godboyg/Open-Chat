@@ -697,7 +697,7 @@ function Page() {
                                    >
                                     <div className="font-bold">
                                       {
-                                         msg.reply.senderId === session?.user.internalId ? "You" : otherUser.otherUser?.fullName
+                                         msg.reply.senderId === session?.user.internalId ? "You" : otherUser?.otherUser?.fullName
                                       }
                                     </div>
                                     <div className="w-full break-words">{msg.reply.text}</div>
