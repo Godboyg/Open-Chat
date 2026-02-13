@@ -48,13 +48,13 @@ const messageSlice = createSlice({
         state.byConversationId[conversationId] = [];
       }
 
-      const exists = state.byConversationId[conversationId].some(
-         (msg) => msg._id === _id
-      );
+      const messages = state.byConversationId[conversationId];
 
-      if (exists) return;
+      if (messages.find((msg) => msg._id === _id)) {
+        return;
+      }
 
-      state.byConversationId[conversationId].push(action.payload);
+      messages.push(action.payload)
     },
 
     removeMessage(state , action: PayloadAction<{ conversation: string , id: string }>) {
