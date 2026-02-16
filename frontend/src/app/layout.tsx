@@ -12,12 +12,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script 
-          async 
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2915175777820694"
-          crossOrigin="anonymous"
-          />
+        <meta name="google-adsense-account" content="ca-pub-2915175777820694">
       </head>
       <body
         className=""
