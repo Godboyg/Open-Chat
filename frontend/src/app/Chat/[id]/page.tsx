@@ -362,17 +362,17 @@ function Page() {
       loadMessages();
     }, [activeId]);
 
-    useEffect(() => {
-        const timer =  setTimeout(() => {
-            if(callState !== "connected") {
-               setCall(false);
-               setCallState("idle");
-               toast.error("not answering");
-            }
-        },10000)
+    // useEffect(() => {
+    //     const timer =  setTimeout(() => {
+    //         if(callState !== "connected") {
+    //            setCall(false);
+    //            setCallState("idle");
+    //            toast.error("not answering");
+    //         }
+    //     },10000)
 
-        return () => clearTimeout(timer)
-    },[callState])
+    //     return () => clearTimeout(timer)
+    // },[callState])
 
     const startCall = async () => {
       setReplyTo("")
