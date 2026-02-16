@@ -18,6 +18,12 @@ export default function RootLayout({
         className=""
       >
         <ThemeProvider>
+          <Script
+          async
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2915175777820694"
+          crossOrigin="anonymous"
+        />
           {children}
         </ThemeProvider>
       </body>
