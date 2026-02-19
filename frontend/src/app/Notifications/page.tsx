@@ -5,19 +5,23 @@ import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import React, { useEffect, useRef, useState } from 'react'
 import Image from 'next/image';
+import 'remixicon/fonts/remixicon.css';
 import { getSocket , subscribe , emit } from '@/lib/socket';
 import toast, { Toaster } from 'react-hot-toast';
 import { formatMessageDateHeader } from '@/lib/dateHeader';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
-import { upsertConversation } from '@/redux/conversationSlice';
+import { seenLastMessage, setInfo, upsertConversation } from '@/redux/conversationSlice';
 import { motion } from "motion/react";
 import { subscribeToPush } from '@/lib/push';
+import { markMessagesRead } from '@/redux/messageSlice';
+import { useRouter } from 'next/navigation';
 
 const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 function Page() {
 
     const mode = useAppSelector((state) => state.theme.mode);
+    const router = useRouter();
     const dispatch = useAppDispatch();
     const { data: session , status } = useSession();
     const notification = useAppSelector((state) => state.notifications.items)
@@ -68,13 +72,26 @@ function Page() {
                 }))
                 dispatch(removeFriendRequest({ to: data._id , from: data.from }))
                 console.log("u unfrnd the user", data.newFriend)
-            } else if(data.type === "request-accepted") {
+            }else if(data.type === "msg-seen"){
+                console.log("seen", data.msg);
+                let time = new Date();
+                dispatch(setInfo(time));
+                dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            } 
+            else if(data.type === "seen-now") {
+                console.log("seen just now",data);
+                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            }
+            else if(data.type === "request-accepted") {
+               setisLoading(false);
                dispatch(addFriend({
                    _id: data._id,
                    status: data.status,
                    conversationId: data.conversationId
                }));
-               console.log(data._id , data);
+               console.log("requesdt",data._id , data);
                dispatch(removeFriendRequest({ to: data._id , from: data.from }));
                const upsert = {
                    convo : {
@@ -94,10 +111,12 @@ function Page() {
           try{
             // let subscription = await subscribeToPush(key ? key : "");
             emit({ type:"user-online", session });
-            emit({ type:"mark-n", session });
-            if(session?.user.internalId) {
-              dispatch(markAllRead(session?.user?.internalId));
-            } 
+            setTimeout(() => {
+              emit({ type:"mark-n", session });
+              if(session?.user.internalId) {
+                dispatch(markAllRead(session?.user?.internalId));
+              }
+            }, 3000) 
           } catch(err) {
             toast.error("pls refresh!");
           }
@@ -125,12 +144,15 @@ function Page() {
                 if(result.length > 0) {
                     console.log("adding")
                     const formattedNotification = 
-                    result.length > 0 ? result.map((n: any) => ({
+                    result.length > 0 ? result
+                    .filter((n: any) => n.otherUser)
+                    .map((n: any) => ({
                         _id: session.user.internalId,
                         type: n.notify.type,
                         message: n.notify.message,
                         createdAt: n.notify.createdAt,
-                        read: true,
+                        read: n.notify.isRead,
+                        updatedAt: n.notify.updatedAt,
                         otherUser: {
                             image: n.otherUser.image,
                             name: n.otherUser.fullName,
@@ -194,7 +216,9 @@ function Page() {
     <div className={`h-screen w-full flex items-center justify-center ${mode ? "bg-black text-white" : "bg-white text-black"}`}>
         <Toaster />
         <div className="h-screen px-1 py-3 flex flex-col gap-2 lg:w-[60%] w-[95%]">
-            <div className="">
+            <div className="flex items-center gap-2">
+                <i className="ri-arrow-left-line hover:cursor-pointer"
+                onClick={() => router.push("/General")}></i>
                 <h2 className='font-bold text-xl'>Notifications</h2>
             </div>
             <div className="h-[90%] overflow-auto flex flex-col gap-2">
@@ -212,6 +236,14 @@ function Page() {
                     
                           const showDateDivider = index === 0 || currentDate !== previousDate;
 
+                          const FIVE_MIN = 1 * 60 * 1000;
+
+                          const updatedAt = notify.notify?.updatedAt ? notify.notify?.updatedAt : "";
+
+                          const isFresh =
+                           !notify.read ||
+                            Date.now() - new Date(updatedAt).getTime() < FIVE_MIN;
+
                         return (
                             <>
                             <div className="px-1">
@@ -225,15 +257,21 @@ function Page() {
                                    </div>
                                  )}
                             </div>
-                            <div className="inline-flex items-center gap-4 rounded-lg w-full" key={index}>
+                            <div className={`
+                            ${isFresh ? "bg-gray-900 animate-pulse" : "bg-black/50"}
+                              inline-flex items-center gap-4 rounded-lg w-full`} key={index}>
                                 <div className="flex items-center w-full">
                                   <div className="">
                                     <Image 
-                                      src={notify.otherUser?.image ? notify.otherUser.image : ""}
+                                      src={
+                                      notify.otherUser?.image?.startsWith("http")
+                                        ? notify.otherUser.image
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${notify.otherUser?.image}`
+                                    }
                                       alt='User'
-                                      height={40}
-                                      width={40}
-                                      className='object-cover rounded-full'
+                                      height={100}
+                                      width={100}
+                                      className='object-cover h-10 w-10 rounded-full'
                                     />
                                 </div>
                                  <div className="text-sm  px-2 py-1 text-white w-full break-words break-all whitespace-normal leading-snug">

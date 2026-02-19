@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
         // required: true,
         // unique: true,
         trim: true,
-        match: [/^\d{10}$/, "Phone number must be exactly 10 digits"],
+        // match: [/^\d{10}$/, "Phone number must be exactly 10 digits"],
     },
     lastActive: { type: Date , default: Date.now }},
     { timestamps: true }

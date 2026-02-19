@@ -1,6 +1,7 @@
 import axios from "axios";
 import NextAuth, { DefaultSession , DefaultUser } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { takeCoverage } from "v8";
 
 declare module "next-auth" {
   interface User extends DefaultUser {
@@ -55,11 +56,19 @@ const handler = NextAuth({
 
       async session({ session, token }) {
         session.user.internalId = token.internalId;
+        session.user.image = token.image as string;
         return session;
       },
 
-      async jwt({ token, user }) {
-        if (user) token.internalId = user.internalId;
+      async jwt({ token, user , session , trigger }) {
+        if (user) {
+           token.internalId = user.internalId;
+           token.image = user.image;
+        }
+
+        if(trigger === "update") {
+          token.image = session.image
+        }
         return token;
       },
      },

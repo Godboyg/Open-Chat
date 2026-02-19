@@ -11,7 +11,6 @@ export interface reply {
   name?: string | undefined | null;
   senderId: string;
   text: string;
-  // date: Date | number | string;
 }
 
 export interface Message {
@@ -23,6 +22,7 @@ export interface Message {
   reply?: reply;
   edited?: boolean;
   // name: string;
+  time?: Date;
   createdAt?: Date | number | string;
   status?: "sent" | "read";
   deliveryStatus?: DeliveryStatus;
@@ -48,13 +48,13 @@ const messageSlice = createSlice({
         state.byConversationId[conversationId] = [];
       }
 
-      const exists = state.byConversationId[conversationId].some(
-         (msg) => msg._id === _id
-      );
+      const messages = state.byConversationId[conversationId];
 
-      if (exists) return;
+      if (messages.find((msg) => msg._id === _id)) {
+        return;
+      }
 
-      state.byConversationId[conversationId].push(action.payload);
+      messages.push(action.payload)
     },
 
     removeMessage(state , action: PayloadAction<{ conversation: string , id: string }>) {
@@ -94,8 +94,9 @@ const messageSlice = createSlice({
      if (!messages) return;
 
      messages.forEach((msg) => {
-      if(msg.senderId === userId) {
+      if(msg.senderId === userId && msg.status !== "read") {
         msg.status = "read"
+        msg.time = new Date()
       }
      })
    },

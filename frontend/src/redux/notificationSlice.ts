@@ -8,7 +8,8 @@ interface otherUser {
 }
 
 interface notify {
-  createdAt: Date
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface NotificationN {

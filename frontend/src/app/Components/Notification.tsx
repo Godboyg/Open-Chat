@@ -17,7 +17,7 @@ type props = {
   accepted: (data: Friend) => void
 }
 
-function Notification({ onIs , close , accepted }: props) {
+function Notification({ onIs , close , accepted , notification }: props) {
 
   const controls = useAnimation();
   const { data: session } = useSession();
@@ -30,7 +30,7 @@ function Notification({ onIs , close , accepted }: props) {
   const pendingNotification = useAppSelector((state) => state.notifications.items);
   console.log("penfins",pendingNotification);
   const sfiub = useAppSelector((state) => state.conversations.allIds);
-  console.log(sfiub);
+  console.log("notoi",notificationReceived , notification);
 
   useEffect(() => {
     try{
@@ -118,7 +118,8 @@ function Notification({ onIs , close , accepted }: props) {
                 pendingNotification.length > 0 && (
                   <div className="max-w-full">
                     {
-                      pendingNotification.map((pending) => (
+                      pendingNotification.map((pending) => 
+                        pending.message === "REQUEST_RECEIVED" && (
                         <div className="flex items-center gap-2 max-w-full px-3 py-1 bg-black shadow shadow-cyan-600">
                           <div className="text-lg font-semibold">
                             {pending.message}
@@ -133,13 +134,18 @@ function Notification({ onIs , close , accepted }: props) {
                   <div className="w-full">
                     <div className="w-full flex flex-col gap-1">
                 {
-                  notificationReceived.map((notify , index) => (
+                  notificationReceived.map((notify , index) => 
+                    notify.image && (
                     <div className="flex items-center justify-between gap-2 w-full"
                     key={index}>
                        <div className="flex items-center gap-3">
                          <div className="h-8 w-8 hover:cursor-pointer rounded-full overflow-hidden">
                           <Image 
-                            src={notify.image ? notify.image : ""}
+                            src={
+                                      notify.image?.startsWith("http")
+                                        ? notify.image
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${notify.image}`
+                                    }
                             alt='show'
                             height={34}
                             width={34}

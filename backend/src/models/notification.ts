@@ -8,7 +8,8 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String},
     conversationId: { type: String },
     isRead: { type: Boolean },
-    createdAt: { type: Date , default: Date.now}
+},{
+  timestamps: true
 })
 
 notificationSchema.index(

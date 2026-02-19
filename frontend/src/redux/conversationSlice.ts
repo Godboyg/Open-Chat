@@ -3,7 +3,8 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export type lastM = {
   text: string,
   senderId: string,
-  createdId: Date | string
+  createdAt: Date,
+  isRead?: boolean;
 }
 
 export type convo = {
@@ -30,6 +31,7 @@ interface ConversationState {
   byId: Record<string, Conversation>;
   allIds: string[];
   activeId: string | null;
+  seenTime?: Date | undefined;
 }
 
 const initialState: ConversationState = {
@@ -52,6 +54,11 @@ const conversationSlice = createSlice({
       if (!state.allIds.includes(id)) {
         state.allIds.unshift(id);
       }
+    },
+
+    setInfo(state , action: PayloadAction<Date | undefined>) {
+      if(!action.payload) return;
+      state.seenTime = action.payload
     },
 
     setActiveConversation(
@@ -77,16 +84,32 @@ const conversationSlice = createSlice({
 
     updateLastMessage(
       state,
-      action: PayloadAction<{ conversationId: string; lastMessage: any }>
+      action: PayloadAction<{ conversationId: string; lastMessage: any}>
     ) {
       const { conversationId, lastMessage } = action.payload;
       if (!state.byId[conversationId]) return;
 
       state.byId[conversationId].convo.lastMessage = lastMessage;
+
+      if(lastMessage.isRead !== "read") {
+        const seen = new Date();
+        state.seenTime = seen;
+      }
+      
       state.allIds = [
         conversationId,
         ...state.allIds.filter(id => id !== conversationId),
       ];
+    },
+
+    seenLastMessage(state , action: PayloadAction<{ conversationId: string; }>) {
+      const { conversationId } = action.payload;
+      if (!state.byId[conversationId]) return;
+
+      const convo = state.byId[conversationId];
+      if (!convo?.convo.lastMessage) return;
+
+      convo.convo.lastMessage.isRead = true;
     },
 
     resetConversations() {
@@ -99,7 +122,9 @@ export const {
   upsertConversation,
   setActiveConversation,
   updateLastMessage,
+  seenLastMessage,
   setConversations,
+  setInfo,
   resetConversations,
 } = conversationSlice.actions;
 

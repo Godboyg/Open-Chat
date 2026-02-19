@@ -3,6 +3,14 @@ import User from "../models/user.js";
 import crypto from "crypto";
 import friend from "../models/friend.js";
 import conversation from "../models/conversation.js";
+import { saveProfileImage } from "../utils/upload.util.js";
+import { mkdirSync } from "fs";
+import path from "path";
+import { existsSync, unlinkSync } from "fs";
+import { queryCoercions } from "elysia/schema";
+import { tryParse } from "elysia/type-system/utils";
+
+mkdirSync("./uploads/profile-images", { recursive: true });
 
 export const getUsers = async() => {
     const allUsers = await User.find();
@@ -106,7 +114,6 @@ export const friendShip = async({ query }: any) => {
         convoId: []
       };
     }
-
       
         const friendIds = friendShip.map((f: any) =>
       f.requester.toString() === userId
@@ -114,7 +121,6 @@ export const friendShip = async({ query }: any) => {
         : f.requester
     );
 
-    // 3. Find conversations between user and friends
     const convoId = await conversation.find({
       participents: {
         $all: [userId],
@@ -127,3 +133,109 @@ export const friendShip = async({ query }: any) => {
         console.log("error",Error);
     }
 } 
+
+export const SearchUsers = async({ query }: any) => {
+    try{
+        const name = query.name;
+
+        if (!name) {
+          return {
+            success: false,
+            message: "Search name is required"
+          };
+        }
+
+        const users = await User.find({
+            fullName: { $regex: name, $options: "i" }
+        }).limit(10);
+
+        console.log("users ", users);
+
+        return {
+            success: true,
+            count: users.length,
+            data: users
+        }
+
+    } catch(error) {
+        console.log("error",error);
+    }
+}
+
+export const uploadProfile = async ({ body }: any) => {
+  const file = body.profileImage as File;
+  const userId = body.userId as string;
+
+  console.log(body);
+
+  if (!file) {
+    return { error: "No file uploaded" };
+  }
+
+  const imageUrl = await saveProfileImage(file);
+
+  console.log(imageUrl);
+
+  const user = await User.findOne(
+      {uniqueUserId: userId}
+  );
+
+  if (!user) {
+    return { message: "User not found" };
+  }
+  const oldImage = user.image;
+
+  try {
+  user.image = imageUrl;
+  await user.save();
+
+  if (oldImage) {
+    const oldImagePath = path.join(
+      process.cwd(),
+    //   "uploads/profile-images",
+      oldImage
+    );
+
+    if (existsSync(oldImagePath)) {
+      unlinkSync(oldImagePath);
+    }
+  }
+} catch (err) {
+  console.error("Error saving user:", err);
+}
+
+  return {
+    success: true,
+    profileImage: imageUrl,
+  };
+};
+
+export const updateName = async({ body }: any) => {
+    try{
+        const userId = body.userId;
+        const name = body.name;
+        const updateUser = await User.findOneAndUpdate(
+            { uniqueUserId: userId },
+            {
+                $set: {
+                    fullName: name
+                }
+            },
+            {
+                new: true
+            }
+        )
+
+        if (!updateUser) {
+          return { success: false, message: "User not found" };
+        }
+
+        return {
+          success: true,
+          message: "Name updated successfully",
+          data: updateUser
+        };
+    } catch(Error) {
+        console.log("Error",Error)
+    }
+}

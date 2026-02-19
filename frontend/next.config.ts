@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
       "lh3.googleusercontent.com",
       "https://images.pexels.com",
       "images.pexels.com",
+      "localhost",
+      "open-chat-v9i4.onrender.com",
     ],
   }
 };

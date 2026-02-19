@@ -2,7 +2,7 @@
 import React, { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useAppDispatch , useAppSelector } from '@/redux/hooks';
 import Dots from '../Components/Dots';
-import { motion , AnimatePresence } from 'motion/react';
+import { motion , AnimatePresence, easeIn } from 'motion/react';
 import { signOut } from 'next-auth/react';
 import { getSocket , subscribe , emit } from '@/lib/socket';
 import { timeAgo } from '@/lib/timeAgo';
@@ -20,9 +20,9 @@ import { setOnlineCount, setUserOnline } from '@/redux/themeSlice';
 import axios from 'axios';
 import Notification from '../Components/Notification';
 import { addFriend, addFriendRequest, Friend, removeFriend, removeFriendRequest } from '@/redux/friendSlice';
-import { Conversation, setActiveConversation, setConversations, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
+import { Conversation, seenLastMessage, setActiveConversation, setConversations, setInfo, updateLastMessage, upsertConversation } from '@/redux/conversationSlice';
 import { addNotification } from '@/redux/notificationSlice';
-import { addMessage } from '@/redux/messageSlice';
+import { addMessage, markMessagesRead } from '@/redux/messageSlice';
 import { formatLastActive } from '@/lib/LastActive';
 import { subscribeToPush } from '@/lib/push';
 import peer from '@/webrtc/peer';
@@ -83,6 +83,7 @@ type CallState = "idle" | "calling" | "ringing" | "connected";
 
 function Page() {
     const [open , setOpen] = useState(false);
+    const [large , setLarge ] = useState<boolean>(false);
     const [notify , setNotify] = useState<NotificationType[]>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [thought , setThought] = useState<string | null | undefined>("");
@@ -113,9 +114,14 @@ function Page() {
     const [editTo , setEditTo] = useState<message | null>(null);
 
     const [dclik , setDClick] = useState(false);
-    // const [active , setActive] = useState(false);
+    const [searchName , setSearchName] = useState("");
+    const [searchNameLoading , setSearchNameLoading] = useState<boolean>(false);
+    const [current , setCurrent] = useState<any>();
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const [result , setResult] = useState<any[]>([]);
     const [typing , setTyping] = useState<boolean>(false); 
     const profileRef = useRef<HTMLDivElement | null>(null);
+    const [search , setSearch] = useState<boolean>(false);
     // const [activeUsers , setActiveUsers] = useState<activeUsers[]>([])
     // const [allActiveUsers , setAllActiveUsers] = useState<string[]>([]);
     const [disabled, setDisabled] = useState<boolean>(false);
@@ -125,6 +131,7 @@ function Page() {
     const router = useRouter();
     const { data: session , status} = useSession();
     const [currentProfile , setCurrentProfile] = useState<message | null >(null)
+    const [speakerOn, setSpeakerOn] = useState(false);
 
     const [callState, setCallState] = useState<CallState>("idle");
     const [callerId, setCallerId] = useState<string | null>(null);
@@ -256,8 +263,8 @@ function Page() {
     useEffect(() => {
         console.log("data session",session);
         setCurrentUser({
-            name: session?.user?.name,
-            image: session?.user?.image
+            name: session?.user.name,
+            image: session?.user.image
         });
     },[session])
 
@@ -509,7 +516,7 @@ function Page() {
                  console.log("new message", data.msg);
                  setPMsg((prev) => [...prev, data.msg]);
                  dispatch(addMessage({
-                  _id: crypto.randomUUID(),
+                  _id: data.msg.clientMessageId,
                   conversationId: data.msg.conversationId,
                   senderId: data.msg.senderId,
                   text: data.msg.text,
@@ -527,10 +534,24 @@ function Page() {
                    lastMessage: {
                        text: data.msg.text,
                        senderId: data.msg.senderId,
-                       createdId: data.msg.createdAt
+                       createdAt: data.msg.createdAt,
+                       isRead: true
                    }
                  }));
-             }
+             } else if (data.type === "request-exist") {
+                toast.error("request already exist");
+             } else if(data.type === "seen-now") {
+                console.log("seen just now",data);
+                dispatch(markMessagesRead({ conversationId: data.activeId, userId: data.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.activeId }))
+            } else if(data.type === "msg-seen"){
+                console.log("seen", data.msg);
+                 let time = new Date();
+                dispatch(setInfo(time));
+                 dispatch(markMessagesRead({ conversationId: data.msg.conversationId, userId: data.msg.senderId }))
+                dispatch(seenLastMessage({ conversationId: data.msg.conversationId }));
+                setTyping(false);
+            }
         })
 
         return () => unsubscribe()
@@ -539,6 +560,20 @@ function Page() {
      const matchedFriend = friend.find(
           (fnd: Friend) => fnd._id === currentProfile?.User_id
      );
+
+     const toggleSpeaker = () => {
+           const next = !speakerOn;
+     
+           peer.toggleSpeaker(next);
+           setSpeakerOn(prev => !prev);
+     
+           emit({
+             type: "speaker-state",
+             enabled: next,
+             to: otherUser.otherUser?.uniqueUserId,
+             session
+           });
+    };
 
     useEffect(() => {
         const store = async() => {
@@ -739,11 +774,15 @@ function Page() {
         }
     }
 
-    const handleSendRequest = () => {
+    const handleSendRequest = (res: any) => {
         try{
+            if(res) {
+                setCurrent(res);
+                console.log("res current",res, current);
+            }
             setDisabled(true);
             console.log("Request send");
-            emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id});
+            emit({ type:"friend-request" , from: session?.user.internalId , to: currentProfile?.User_id || res.uniqueUserId});
         } catch(error) {
             console.log("Error",error);
         }
@@ -884,13 +923,47 @@ function Page() {
           emit({ type: "call-end", to: callerId , session });
         } 
       }
+
+      const handleSearchName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchName(value);
+    setSearchNameLoading(true);
+
+    if(value.length === 0) {
+        setSearchNameLoading(false);
+    }
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(async () => {
+      if (!value.trim()) return;
+
+      try {
+        const res = await axios.get("/api/app/user/search", {
+            params: {
+                name: searchName
+            }
+        })
+        if(res.data.data) {
+           setResult(res.data.data);
+        }
+        console.log("res user name",res);
+      } catch (err) {
+        console.error("API error", err);
+      } finally {
+        setSearchNameLoading(false);
+      }
+    }, 500);
+  };
  
   return (
     <div className={`h-screen relative w-full ${mode ? "bg-black text-white" : "bg-white text-black"}`}>
         <Toaster />
         {
             call && <Call callState={callState} localVideo={localVideoRef} remoteVideo={remoteVideoRef} onAccept={acceptCall} onEndCall={endCall} other={otherUser}
-            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn}
+            user={user} stream={stream} caller={callerId} session={session} remote={remoteVideoOn} speakerOn={speakerOn} toggleSpeaker={toggleSpeaker}
                         cameraOn={cameraOn} micOn={micOn} toggleCamera={toggleCamera} toggleMic={toggleMic} remoteStream={remoteStream}/>
         }
         <div className="w-full flex items-center justify-center">
@@ -902,7 +975,7 @@ function Page() {
                 )
             }
         </div>
-        <div className="py-2 px-3.5 flex items-center w-full">
+        <div className="py-2 px-3.5 flex items-center justify-between w-full">
             <div className="p-3 md:py-2.5 md:px-3.5 hover:cursor-pointer rounded-tl-md rounded-bl-md [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%,0_60%)] rounded-tr-md
              bg-black shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]"
             onClick={handleMsgClick}>
@@ -918,7 +991,7 @@ function Page() {
                     ) : (
                         conversations.length > 0 && (
                          hasMessage ? (
-                          <div className="relative bg-green-500">
+                          <div className="relative">
                             <i className="ri-send-plane-line text-sm"></i>
                             <div className="h-1.5 w-1.5 rounded-full bg-red-500 absolute bottom-0 right-0"></div>
                             </div>
@@ -931,7 +1004,163 @@ function Page() {
                     )
                 }
             </div>
-            <div className="absolute lg:top-[50%] top-[3%] right-[3%] lg:left-7 hover:bg-gray-800 transition duration-300 ease-in h-9 w-9 flex items-center justify-center rounded-full hover:cursor-pointer text-white"
+            <div className={`flex items-center shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)] gap-1 p-1 hover:cursor-pointer rounded-xl 
+            `}
+            onClick={() => setSearch(!search)}>
+                <i className="ri-search-line"></i>
+                <span>Search</span>
+            </div>
+            <div
+        className={`
+          cursor-pointer
+          transition-all
+          duration-500
+          transform
+          ease-in-out
+          ${
+            search
+              ? "w-full rounded-xl absolute top-0 left-0 lg:left-1/2 lg:-translate-x-1/2 backdrop-blur-sm z-9999 lg:w-[68%] h-screen"
+              : ""
+          }
+        `}>
+        <motion.div
+          drag="y"
+          dragSnapToOrigin
+          dragConstraints={{ top: 5 }}
+          onDragEnd={(e , info) => {
+            if(Math.abs(info.offset.x) > 10) {
+                setSearch(!search)
+            }
+          }}
+          className={`
+            absolute inset-0
+            transition-opacity
+            flex flex-col
+            duration-400
+            shadow-[0_0_15px_5px_rgba(6,182,212,0.7),inset_0_0_10px_rgba(6,182,212,0.5)]
+            px-4 py-2
+            ${search ? "opacity-100 delay-300 z-9999 backdrop-blur-md" : "opacity-0 pointer-events-none hidden z-0 "}
+          `}
+        >
+          <div className="w-full flex items-center justify-center">
+            <div className="w-8 h-1 rounded-xl bg-gray-600">
+            </div>
+          </div>
+          <div className="h-[10%] w-full px-3 flex rounded-xl border border-gray-600">
+            <div className="flex w-full items-center">
+                <input 
+                type="text" 
+                placeholder='Search' 
+                value={searchName}
+                onChange={handleSearchName}
+                className='flex-1 border-0 outline-none text-gray-300'/>
+                <div className="">
+                    {
+                        searchNameLoading ? (
+                           <div className="h-3 w-3 rounded-full border-2 border-black animate-spin border-t-cyan-500"></div>
+                        ) : (
+                            <i className="ri-close-circle-fill"
+                           onClick={() => setSearchName("")}></i>
+                        )
+                    }
+                </div>
+            </div>
+          </div>
+          <div className="h-[95%] flex flex-col gap-2 p-2 w-full overflow-auto">
+            <div className="font-bold text-gray-500">Result</div>
+            {
+                result.length > 0 ? (
+                    result.map((res, index) => {
+                        const matchedFriend = friend.find(
+                           (fnd: Friend) => fnd._id === res.uniqueUserId
+                         );
+                         const imageSrc =
+                             res?.image?.startsWith("http")
+                               ? res.image
+                               : `${process.env.NEXT_PUBLIC_API_URL}${res?.image}`;
+
+                           if (!res?.image) return null;
+                      return (
+                        <div className="p-2 bg-g flex items-center hover:bg-gray-900 justify-between rounded-xl w-full">
+                          <div className="flex items-center gap-2">
+                            {large && (
+                            <div
+                              onClick={() => setLarge(false)}
+                              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity duration-300"
+                            >
+                              <div
+                                className="transform transition-all duration-300 scale-100"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <img
+                                  src={imageSrc}
+                                  alt="expanded"
+                                  className="h-50 w-50 max-h-[40rem] max-w-[40rem] rounded-full object-cover"
+                                />
+                              </div>
+                            </div>
+                            )}
+                              <div className="relative"
+                              onClick={() => setLarge(true)}>
+                                  <Image 
+                                    src={imageSrc}
+                                    alt='user'
+                                    height={45}
+                                    width={45}
+                                    className='rounded-full h-10 w-10 object-cover'
+                                   />
+                                   <div className="absolute z-99 top-0 left-0">
+                                    {
+                                        allOnlineUsers?.includes(res.uniqueUserId) ? (
+                                            <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+                                        ) : (
+                                            <div className="">
+                                            </div>
+                                        )
+                                    }
+                                </div>
+                              </div>
+                              <div className="">
+                                  {res.fullName}
+                              </div>
+                          </div>
+                          <div className="">
+                            {
+                                res.uniqueUserId === session?.user.internalId ? (
+                                    <div className="px-4 py-2 bg-blue-700 text-gray-300 rounded-xl">
+                                        You
+                                    </div>
+                                ) : (
+                                    matchedFriend ? (
+                                    <div className="px-4 py-2 bg-blue-500 rounded-xl">
+                                        Friends
+                                    </div>
+                                ) : (
+                                    <div
+                                      className={`p-2 flex items-center justify-center rounded-xl hover:cursor-pointer
+                                        ${disabled && current?.uniqueUserId === res?.uniqueUserId ? "bg-blue-900 text-gray-700" : "bg-blue-600 text-gray-300"}`}
+                                      onClick={!disabled ? () => handleSendRequest(res) : undefined}
+                                    >
+                                      {
+                                        current?.uniqueUserId === res?.uniqueUserId && disabled ? "Sent" : "Request"
+                                      }
+                                    </div>
+                                )
+                                )
+                            }
+                          </div>
+                        </div>
+                      )})
+                ) : (
+                    <div className="text-center w-full">
+                        No user Found
+                    </div>
+                )
+            }
+          </div>
+        </motion.div>
+            </div>
+            <div className="hover:bg-gray-800 transition duration-300 ease-in h-9 w-9 flex items-center justify-center rounded-full hover:cursor-pointer text-white"
             onClick={() => {
                 router.push("/Notifications")
             }}>
@@ -939,7 +1168,7 @@ function Page() {
                 {
                     items.length > 0 && items.map((itm , index) => (
                         itm.read !== true && (
-                            <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500"
+                            <div className="absolute top-0 right-0 h-5 w-5 rounded-full bg-red-500"
                             key={index}>
                               <div className="w-full h-full flex items-center justify-center text-sm">
                                {items.length}                        
@@ -1031,11 +1260,15 @@ function Page() {
                                             <>
                                             <div className="hover:cursor-pointer">
                                                 <Image
-                                                 src={msg?.User?.image ? msg.User.image : ""}
+                                                 src={
+                                      msg.User.image?.startsWith("http")
+                                        ? msg.User.image
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${msg.User.image}`
+                                    }
                                                  alt="User"
                                                  width={38}
                                                  height={38}
-                                                 className="rounded-full object-cover overflow-hidden"
+                                                 className="rounded-full h-10 w-10 object-cover overflow-hidden"
                                                />
                                             </div>
                                            </>
@@ -1093,11 +1326,15 @@ function Page() {
                                                      <>
                                                      <div className="">
                                                          <Image
-                                                          src={rep?.User?.image}
+                                                         src={
+                                      rep.User.image?.startsWith("http")
+                                        ? rep.User.image
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${rep.User.image}`
+                                    }
                                                           alt="User"
                                                           width={30}
                                                           height={30}
-                                                          className="rounded-full object-cover overflow-hidden"
+                                                          className="rounded-full h-10 w-10 object-cover overflow-hidden"
                                                         />
                                                      </div>
                                                     </>
@@ -1156,12 +1393,16 @@ function Page() {
                                 typer.map((user, index) => {
                                  return (
                                      <Image
-                                       src={user}
+                                       src={
+                                      user.startsWith("http")
+                                        ? user
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${user}`
+                                    }
                                        alt='User'
                                        key={index}
                                        height={20}
                                        width={20}
-                                       className='rounded-full object-cover hover:cursor-pointer'
+                                       className='rounded-full h-8 w-8 object-cover hover:cursor-pointer'
                                      />
                                  )   
                                 })
@@ -1279,15 +1520,19 @@ function Page() {
                        className='w-[95%] lg:w-[50%] h-[60vh] rounded-md p-3 bg-gray-950 absolute bottom-0'>
                          <motion.div
                          className='w-full mt-3 flex items-center justify-center'>
-                            <div className="flex relative items-center bg-green-500 justify-center rounded-full">
+                            <div className="flex relative items-center justify-center rounded-full">
                                 {
                                     currentProfile?.User?.image ? (
                                         <Image
-                                          src={currentProfile.User.image}
+                                          src={
+                                      currentProfile.User.image?.startsWith("http")
+                                        ? currentProfile.User.image
+                                        : `${process.env.NEXT_PUBLIC_API_URL}${currentProfile.User.image}`
+                                    }
                                           alt='Profile'
                                           height={40}
                                           width={40}
-                                          className='object-cover rounded-full overflow-hidden'
+                                          className='object-cover h-11 w-11 rounded-full overflow-hidden'
                                         />
                                     ) : (
                                         <img
@@ -1323,7 +1568,6 @@ function Page() {
 
   ) : (
     <div className="w-full flex items-center justify-center mt-3">
-
       {matchedFriend ? (
         <div
           className="w-[80%] bg-green-500 p-2 text-white rounded-md flex items-center justify-center hover:cursor-pointer"
@@ -1362,14 +1606,23 @@ function Page() {
             )
         }
         </AnimatePresence>
-        {
+        <AnimatePresence>
+            {
             open && (
                 <div className="h-screen w-full absolute top-0 left-0 backdrop-blur-2xl bg-opacity-50">
                     <motion.div
-                     initial={{ x: -50, width: 0 , height: "100vh"}}
-                     animate={{ x: 0 , width: screenSize ? "65vw" : "30vw", height: "100vh"}}
-                     transition={{ duration: 0.5 }}
+                     initial={{ x: -50, width: 0 , height: "100vh" , opacity: 0 , filter: "blur(5px)"}}
+                     animate={{ x: 0 , width: screenSize ? "65vw" : "30vw", height: "100vh" ,opacity: 1 , filter:"blur(0px)"}}
+                     transition={{ duration: 0.4 , ease: 'easeIn' }}
                      ref={containerRef}
+                     exit={{
+                        width: 10,
+                        filter: "blur(4px)",
+                        opacity: 0,
+                        transition:{
+                            duration: 0.4 , ease: "easeIn"
+                        }
+                     }}
                      className={`absolute z-99 top-0 ${mode === "light" ? "bg-white text-black" : "bg-black text-white"} shadow-cyan-500 shadow left-0 py-5 px-3 md:p-5`}
                      >
                          <div className="h-full flex flex-col justify-between">
@@ -1396,19 +1649,23 @@ function Page() {
                                         <div className="flex flex-col gap-2">
                                             {
                                                 conversations.length > 0 ? (
-                                                        conversations.map((convo: Conversation , index) => {
-                                                            console.log("convoooo",convo);
-                                                            return (
+                                                        conversations.map((convo: Conversation , index) => 
+                                                            convo.otherUser && (
                                                               <div className="flex relative hover:cursor-pointer items-center justify-between px-2 py-0.5 rounded-md gap-2 w-full"
                                                               key={index}
                                                               onClick={() => {
-                                                                dispatch(setActiveConversation(convo.convo._id))
+                                                                dispatch(setActiveConversation(convo.convo._id));
+                                                                dispatch(setInfo(convo.convo.lastMessage?.createdAt));
                                                                 router.push(`/Chat/${convo.convo._id}`);
                                                               }}>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="h-9 relative w-9 rounded-full">
                                                                         <Image 
-                                                                          src={convo?.otherUser?.image ? convo.otherUser?.image : ""}
+                                                                          src={
+                                                                           convo.otherUser?.image?.startsWith("http")
+                                                                             ? convo.otherUser.image
+                                                                            : `${process.env.NEXT_PUBLIC_API_URL}${convo.otherUser?.image}`
+                                                                          }
                                                                           alt='User'
                                                                           height={35}
                                                                           width={35}
@@ -1440,13 +1697,35 @@ function Page() {
                                                                                 ? <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
                                                                                     <small className='font-light truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
                                                                                     <span className='h-1 w-1 rounded-full bg-gray-500'></span>
-                                                                                    <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                    <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdAt)}</small>
                                                                                 </div>
-                                                                                : <small className='font-light absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
+                                                                                : <small className='font-light absolute top-5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[33vw] truncate tracking-widest'>{
                                                                                     allOnlineUsers.includes(convo.otherUser?.uniqueUserId ? convo.otherUser.uniqueUserId : "") ? (
-                                                                                        <small className="">Sent</small>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="">
+                                                                                                {
+                                                                                                    convo.convo.lastMessage?.isRead && convo.convo.lastMessage.senderId === session?.user.internalId ?
+                                                                                                    <div className="flex items-center gap-1.5">
+                                                                                                        <span className='text-gray-300 tracking-widest'>Seen</span>
+                                                                                                        <span>{timeAgo(convo.convo.lastMessage?.createdAt)}</span>
+                                                                                                    </div>
+                                                                                                    : <small className="">Sent</small>
+                                                                                                }
+                                                                                            </div>
+                                                                                        </div>
                                                                                     ) : (
-                                                                                        <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                        (
+                                                                                            convo.convo.lastMessage?.isRead && convo.convo.lastMessage.senderId === session?.user.internalId ? (
+                                                                                               <div className="flex items-center gap-1">
+                                                                                                 <span className="text-gray-300 tracking-widest">
+                                                                                                   Seen
+                                                                                                 </span>
+                                                                                                <span>{timeAgo(convo.convo.lastMessage?.createdAt)}</span>
+                                                                                               </div>
+                                                                                            ): (
+                                                                                                <small className="">{formatLastActive(convo.otherUser?.lastActive ? convo.otherUser.lastActive : "")}</small>
+                                                                                            ) 
+                                                                                        )
                                                                                     )
                                                                                 }</small>
                                                                             ) : (
@@ -1456,7 +1735,7 @@ function Page() {
                                                                                          <div className="flex items-center gap-2 absolute top-4.5 lg:w-[20vw] md:w-[18vw] sm:w-[25vw] w-[42vw]">
                                                                                            <small className='font-bold truncate tracking-widest'>{convo.convo.lastMessage?.text}</small>
                                                                                            <span className='h-1 w-1 rounded-full bg-gray-500'></span>
-                                                                                           <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdId)}</small>
+                                                                                           <small className='font-light'>{timeAgo(convo.convo.lastMessage?.createdAt)}</small>
                                                                                          </div>
                                                                                          : (
                                                                                             convo.message && convo.message > 4 ? (
@@ -1482,7 +1761,7 @@ function Page() {
                                                                 }
                                                               </div>
                                                             )
-                                                         })
+                                                         )
                                                 ) : (
                                                     <div className="font-bold italic ml-5">
                                                         Make some friends
@@ -1495,14 +1774,22 @@ function Page() {
                                </div>
                             </div>
                             <div className="h-[10vh] flex items-center justify-between hover:cursor-pointer">
-                                <div className="h-10 relative w-10 flex items-center justify-center overflow-hidden">
-                                    <Image 
-                                    src={currentUser.image ? currentUser.image : avtr}
-                                    alt='profile'
-                                    width={25}
-                                    height={25}
-                                    className='h-9 w-9 rounded-full object-cover'
-                                    />
+                                <div className="h-10 relative w-10 flex items-center justify-center overflow-hidden"
+                                onClick={() => router.push("/Setting")}>
+                                    {
+                                        session?.user.image && 
+                                        <Image 
+                                         src={
+                                           currentUser.image?.startsWith("http")
+                                             ? currentUser?.image
+                                             : `${process.env.NEXT_PUBLIC_API_URL}${currentUser.image}`
+                                         }
+                                         alt='profile'
+                                         width={25}
+                                         height={25}
+                                         className='h-9 w-9 rounded-full object-cover'
+                                        />
+                                    }
                                     <div className="absolute bottom-0 bg-black right-0 flex items-center rounded-full justify-center h-3.5 w-3.5">
                                         {
                                             allOnlineUsers.includes(session?.user.internalId ? session.user.internalId : "") && <div className="h-2 w-2 rounded-full bg-green-600"></div>
@@ -1518,6 +1805,7 @@ function Page() {
                 </div>
             )
         }
+        </AnimatePresence>
     </div>
   )
 }
