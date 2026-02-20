@@ -34,7 +34,7 @@ function page() {
             setPreview(res.data.current.image);
             setName(res.data.current.fullName);
             setUser({
-              name: res.data.current.name,
+              name: res.data.current.fullName,
               image: res.data.current.image
             })
         }
