@@ -271,7 +271,7 @@ function Page() {
                                       alt='User'
                                       height={38}
                                       width={38}
-                                      className='object-cover h-10 w-10 rounded-full'
+                                      className='object-cover h-10 w-12 rounded-full'
                                     />
                                 </div>
                                  <div className="text-sm  px-2 py-1 text-white w-full break-words break-all whitespace-normal leading-snug">
