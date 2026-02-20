@@ -269,8 +269,8 @@ function Page() {
                                         : ""
                                     }
                                       alt='User'
-                                      height={100}
-                                      width={100}
+                                      height={38}
+                                      width={38}
                                       className='object-cover h-10 w-10 rounded-full'
                                     />
                                 </div>
