@@ -15,8 +15,8 @@ export function getSocket(): WebSocket {
     socket.readyState === WebSocket.CLOSED ||
     socket.readyState === WebSocket.CLOSING
   ) {
-    socket = new WebSocket("ws://localhost:9200");
-    // socket = new WebSocket("wss://open-chat-v9i4.onrender.com/ws");
+    // socket = new WebSocket("ws://localhost:9200");
+    socket = new WebSocket("wss://open-chat-v9i4.onrender.com/ws");
 
     socket.onopen = async () => {
   console.log("✅ Connected to WebSocket server");
