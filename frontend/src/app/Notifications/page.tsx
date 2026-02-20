@@ -264,9 +264,9 @@ function Page() {
                                   <div className="">
                                     <Image 
                                       src={
-                                      notify.otherUser?.image?.startsWith("http")
+                                      notify.otherUser?.image
                                         ? notify.otherUser.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${notify.otherUser?.image}`
+                                        : ""
                                     }
                                       alt='User'
                                       height={100}

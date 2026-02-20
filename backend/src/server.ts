@@ -2,6 +2,14 @@
 // import { wss } from "./ws/websocket.js"
 // import http from "http"
 // import { connectDB } from "./lib/db.js"
+// import { staticPlugin } from '@elysiajs/static'
+
+// app.use(
+//   staticPlugin({
+//     assets: "./uploads",
+//     prefix: "/uploads",
+//   })
+// );
 
 // connectDB()
 
@@ -60,7 +68,6 @@ import { createServer } from 'http'
 import WebSocket, { WebSocketServer } from 'ws'
 import { connectDB } from './lib/db.js';
 import { staticPlugin } from '@elysiajs/static'
-
 
 app.use(
   staticPlugin({

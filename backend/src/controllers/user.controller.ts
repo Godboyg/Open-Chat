@@ -5,12 +5,7 @@ import friend from "../models/friend.js";
 import conversation from "../models/conversation.js";
 import { saveProfileImage } from "../utils/upload.util.js";
 import { mkdirSync } from "fs";
-import path from "path";
-import { existsSync, unlinkSync } from "fs";
-import { queryCoercions } from "elysia/schema";
-import { tryParse } from "elysia/type-system/utils";
-
-mkdirSync("./uploads/profile-images", { recursive: true });
+import cloudinary from "../config/cloudinary.js";
 
 export const getUsers = async() => {
     const allUsers = await User.find();
@@ -172,9 +167,10 @@ export const uploadProfile = async ({ body }: any) => {
     return { error: "No file uploaded" };
   }
 
-  const imageUrl = await saveProfileImage(file);
-
-  console.log(imageUrl);
+  console.log("calculating");
+  const result = await saveProfileImage(file);
+  console.log("url and id before",result);
+  const { url, publicId } = result;
 
   const user = await User.findOne(
       {uniqueUserId: userId}
@@ -183,30 +179,25 @@ export const uploadProfile = async ({ body }: any) => {
   if (!user) {
     return { message: "User not found" };
   }
-  const oldImage = user.image;
+  const oldPublicId = user.imagePublicId;
 
   try {
-  user.image = imageUrl;
-  await user.save();
+    user.image = url;
+    user.imagePublicId = publicId;
+    await user.save();
 
-  if (oldImage) {
-    const oldImagePath = path.join(
-      process.cwd(),
-    //   "uploads/profile-images",
-      oldImage
-    );
-
-    if (existsSync(oldImagePath)) {
-      unlinkSync(oldImagePath);
+  if (oldPublicId) {
+      await cloudinary.uploader.destroy(oldPublicId);
     }
-  }
+
+    return { success: true, image: url };
 } catch (err) {
   console.error("Error saving user:", err);
 }
 
   return {
     success: true,
-    profileImage: imageUrl,
+    profileImage: url,
   };
 };
 

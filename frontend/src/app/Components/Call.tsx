@@ -78,9 +78,9 @@ function Call({
                                          <div className="">
                                                     <Image 
                                                          src={
-                                      session?.user.image?.startsWith("http")
+                                      session?.user.image
                                         ? session.user.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${session?.user.image}`
+                                        : ""
                                     }
                                                          alt='user'
                                                          height={45}

@@ -18,30 +18,6 @@ export function getSocket(): WebSocket {
     socket = new WebSocket("ws://localhost:9200");
     // socket = new WebSocket("wss://open-chat-v9i4.onrender.com/ws");
 
-    // socket.onopen = async () => {
-    //   try {
-    //     console.log("✅ Connected to WebSocket server");
-
-    //     const session = await getSession();
-
-    //     const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    //     let subscription: PushSubscription | null = null;
-
-    //     if (key) {
-    //       subscription = await subscribeToPush(key);
-    //     }
-
-    //     emit({
-    //       type: "user-online",
-    //       session,
-    //       subscription
-    //     });
-    //   } catch (error) {
-    //     console.error("❌ WebSocket auth error", error);
-    //     emit({ type: "push-error" , error})
-    //   }
-    // };
-
     socket.onopen = async () => {
   console.log("✅ Connected to WebSocket server");
 

@@ -192,6 +192,10 @@ function Page() {
                 })
             } else{
                 setIsTrue(false);
+                setCurrentUser((prev) => ({
+                    ...prev, 
+                    image: user?.image
+                }))
             }
         }
 
@@ -1075,9 +1079,9 @@ function Page() {
                            (fnd: Friend) => fnd._id === res.uniqueUserId
                          );
                          const imageSrc =
-                             res?.image?.startsWith("http")
+                             res?.image
                                ? res.image
-                               : `${process.env.NEXT_PUBLIC_API_URL}${res?.image}`;
+                               : ""
 
                            if (!res?.image) return null;
                       return (
@@ -1261,9 +1265,9 @@ function Page() {
                                             <div className="hover:cursor-pointer">
                                                 <Image
                                                  src={
-                                      msg.User.image?.startsWith("http")
+                                      msg.User.image
                                         ? msg.User.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${msg.User.image}`
+                                        : ""
                                     }
                                                  alt="User"
                                                  width={38}
@@ -1327,9 +1331,9 @@ function Page() {
                                                      <div className="">
                                                          <Image
                                                          src={
-                                      rep.User.image?.startsWith("http")
+                                      rep.User.image
                                         ? rep.User.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${rep.User.image}`
+                                        : ""
                                     }
                                                           alt="User"
                                                           width={30}
@@ -1394,9 +1398,9 @@ function Page() {
                                  return (
                                      <Image
                                        src={
-                                      user.startsWith("http")
+                                      user
                                         ? user
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${user}`
+                                        : ""
                                     }
                                        alt='User'
                                        key={index}
@@ -1525,9 +1529,9 @@ function Page() {
                                     currentProfile?.User?.image ? (
                                         <Image
                                           src={
-                                      currentProfile.User.image?.startsWith("http")
+                                      currentProfile.User.image
                                         ? currentProfile.User.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${currentProfile.User.image}`
+                                        : ""
                                     }
                                           alt='Profile'
                                           height={40}
@@ -1662,9 +1666,9 @@ function Page() {
                                                                     <div className="h-9 relative w-9 rounded-full">
                                                                         <Image 
                                                                           src={
-                                                                           convo.otherUser?.image?.startsWith("http")
+                                                                           convo.otherUser?.image
                                                                              ? convo.otherUser.image
-                                                                            : `${process.env.NEXT_PUBLIC_API_URL}${convo.otherUser?.image}`
+                                                                            : ""
                                                                           }
                                                                           alt='User'
                                                                           height={35}
@@ -1776,20 +1780,17 @@ function Page() {
                             <div className="h-[10vh] flex items-center justify-between hover:cursor-pointer">
                                 <div className="h-10 relative w-10 flex items-center justify-center overflow-hidden"
                                 onClick={() => router.push("/Setting")}>
-                                    {
-                                        session?.user.image && 
-                                        <Image 
+                                    <Image
                                          src={
-                                           currentUser.image?.startsWith("http")
+                                           currentUser.image
                                              ? currentUser?.image
-                                             : `${process.env.NEXT_PUBLIC_API_URL}${currentUser.image}`
+                                             : ""
                                          }
                                          alt='profile'
                                          width={25}
                                          height={25}
                                          className='h-9 w-9 rounded-full object-cover'
-                                        />
-                                    }
+                                     />
                                     <div className="absolute bottom-0 bg-black right-0 flex items-center rounded-full justify-center h-3.5 w-3.5">
                                         {
                                             allOnlineUsers.includes(session?.user.internalId ? session.user.internalId : "") && <div className="h-2 w-2 rounded-full bg-green-600"></div>

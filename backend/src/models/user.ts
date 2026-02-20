@@ -5,6 +5,9 @@ const userSchema = new mongoose.Schema({
     // deviceId: { type: String },
     uniqueUserId: { type: String},
     image: { type: String },
+    imagePublicId: {
+        type: String
+    },
     fullName: { type: String },
     phoneNumber: { 
         type: String,

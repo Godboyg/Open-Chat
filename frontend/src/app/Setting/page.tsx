@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 
 function page() {
 
-    const { mode , onlineCount } = useAppSelector((state) => state.theme);
+    const { mode } = useAppSelector((state) => state.theme);
     const { data: session , status , update } = useSession();
     const [name , setName] = useState<string>("");
     const [ open , setOpen ] = useState<boolean>(false);
@@ -31,11 +31,12 @@ function page() {
             })
 
             console.log("res",res);
+            setPreview(res.data.current.image);
+            setName(res.data.current.fullName);
             setUser({
-                name: res.data.current.fullName,
-                image: res.data.current.image
+              name: res.data.current.name,
+              image: res.data.current.image
             })
-            setName(res.data.current.fullName)
         }
 
         currentUser();
@@ -78,9 +79,8 @@ function page() {
     console.log(data.success)
 
     if (data.success) {
-      const imageUrl = `http://localhost:9100${data.profileImage}`;
       await update({ image: data.profileImage });
-      setPreview(imageUrl);
+      setPreview(data.profileImage);
     }
 
     setLoading(false);
@@ -148,8 +148,8 @@ function page() {
       >
         {preview ? (
           <img
-            src={preview.startsWith("http") ? 
-              preview : `${process.env.NEXT_PUBLIC_API_URL}${preview}`
+            src={preview ? 
+              preview : ""
             }
             alt="Profile"
             className="w-full h-full object-cover"
@@ -208,9 +208,9 @@ function page() {
                               <Image
                                  alt="user"
                                  src={
-                                    user.image?.startsWith("http")
+                                    user.image
                                       ? user.image
-                                      : `${process.env.NEXT_PUBLIC_API_URL}${user.image}`
+                                      : ""
                                   }
                                  height={95}
                                  width={95}

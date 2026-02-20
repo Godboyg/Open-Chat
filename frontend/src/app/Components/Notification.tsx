@@ -142,9 +142,9 @@ function Notification({ onIs , close , accepted , notification }: props) {
                          <div className="h-8 w-8 hover:cursor-pointer rounded-full overflow-hidden">
                           <Image 
                             src={
-                                      notify.image?.startsWith("http")
+                                      notify.image
                                         ? notify.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${notify.image}`
+                                        : ""
                                     }
                             alt='show'
                             height={34}

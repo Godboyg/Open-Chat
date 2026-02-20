@@ -522,9 +522,9 @@ function Page() {
                                 <div className="relative">
                               <Image 
                                src={
-                                      otherUser.otherUser?.image?.startsWith("http")
+                                      otherUser.otherUser?.image
                                         ? otherUser.otherUser.image
-                                        : `${process.env.NEXT_PUBLIC_API_URL}${otherUser.otherUser?.image}`
+                                        : ""
                                     }
                                alt='User'
                                height={80}
