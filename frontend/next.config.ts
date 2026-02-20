@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source : "/api/app/:path*",
-        destination: "http://localhost:9100/:path*",
+        destination: "https://open-chat-v9i4.onrender.com/:path*",
       }
     ]
   },
