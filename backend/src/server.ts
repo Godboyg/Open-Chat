@@ -2,14 +2,6 @@ import { app } from "./app.js"
 import { wss } from "./ws/websocket.js"
 import http from "http"
 import { connectDB } from "./lib/db.js"
-import { staticPlugin } from '@elysiajs/static'
-
-app.use(
-  staticPlugin({
-    assets: "./uploads",
-    prefix: "/uploads",
-  })
-);
 
 connectDB()
 
