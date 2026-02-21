@@ -527,9 +527,9 @@ function Page() {
                                         : ""
                                     }
                                alt='User'
-                               height={80}
-                               width={80}
-                               className='rounded-full h-10 w-10 object-cover hover:cursor-pointer'
+                               height={40}
+                               width={40}
+                               className='rounded-full h-10 w-11 object-cover hover:cursor-pointer'
                                />
                                <div className="absolute bottom-0 right-0">
                                  {
