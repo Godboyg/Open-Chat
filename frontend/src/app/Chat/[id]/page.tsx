@@ -259,7 +259,7 @@ function Page() {
         emit({ type:"user-online", session });
         emit({ type: "msg read" , activeId: activeId || chatid , session });
         emit({ type: "msg read online" , activeId: activeId || chatid , session });
-    },[messages])
+    },[])
 
     console.log("reply to",replyTo);
 
