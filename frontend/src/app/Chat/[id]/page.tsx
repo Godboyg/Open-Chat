@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks'
 import 'remixicon/fonts/remixicon.css'
 import { getSocket, subscribe , emit } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
-import { addMessage, markMessagesRead, removeMessage, setMessages, updateMessage } from '@/redux/messageSlice';
+import { addMessage, markMessagesRead, removeMessage, setDeliverd , setMessages, updateMessage } from '@/redux/messageSlice';
 import { seenLastMessage, setInfo, updateLastMessage } from '@/redux/conversationSlice';
 import { Suspense } from "react";
 import axios from 'axios';
@@ -209,6 +209,9 @@ function Page() {
             } else if(data.type === "error-edit") {
               // toast.error("error while editing!!");
               console.log("error");
+            } else if(data.type === "AKD") {
+              console.log("AKD received");
+              dispatch(setDeliverd(chatid || activeId));
             }
         }) 
 
