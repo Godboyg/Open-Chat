@@ -611,7 +611,8 @@ function Page() {
                                    </div>
                                  )}
                             </div>
-                            <motion.div
+                            <div className="flex items-center gap-2">
+                              <motion.div
                              drag="x"
                              dragSnapToOrigin
                              dragDirectionLock
@@ -702,7 +703,14 @@ function Page() {
                                 <p className='flex-1 ml-3 text-[3.2vw] sm:text-[2vw] md:text-[1.5vw] lg:text-[1vw] xl:text-[0.9vw]'>{formatISTTime(msg.createdAt)}</p>
                               </div>
                              </div>
-                             </motion.div>
+                              </motion.div>
+                              {
+                                msg.senderId === session?.user.internalId && msg.status === "sent" && 
+                                <div className="">
+                                  <i className="ri-send-plane-2-line"></i>
+                                </div>
+                              }
+                            </div>
                              </>
                         )
                         })
