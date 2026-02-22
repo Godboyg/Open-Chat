@@ -596,6 +596,13 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                   }
                 }
               )
+
+             if(msg) {
+              const socket = wsToUser.get(msg.senderId);
+              if(socket) {
+                socket.send(JSON.stringify({ type: "AKD"}))
+              }
+            }
             
             for(const userId of members.participents){
               if(userId === data.senderId) continue;
