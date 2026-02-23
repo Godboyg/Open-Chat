@@ -84,6 +84,7 @@ type CallState = "idle" | "calling" | "ringing" | "connected";
 function Page() {
     const [open , setOpen] = useState(false);
     const [large , setLarge ] = useState<boolean>(false);
+    const [largeSrc , setLargeSrc] = useState<string>("");
     const [notify , setNotify] = useState<NotificationType[]>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [thought , setThought] = useState<string | null | undefined>("");
@@ -1097,7 +1098,7 @@ function Page() {
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <img
-                                  src={imageSrc}
+                                  src={largeSrc}
                                   alt="expanded"
                                   className="h-50 w-50 max-h-[40rem] max-w-[40rem] rounded-full object-cover"
                                 />
@@ -1105,7 +1106,10 @@ function Page() {
                             </div>
                             )}
                               <div className="relative"
-                              onClick={() => setLarge(true)}>
+                              onClick={() => {
+                                  setLarge(true)
+                                  setLargeSrc(res?.image)
+                              }}>
                                   <Image 
                                     src={imageSrc}
                                     alt='user'
