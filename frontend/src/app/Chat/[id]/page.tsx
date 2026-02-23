@@ -302,6 +302,7 @@ function Page() {
                  senderId: session?.user.internalId,
                  text: msg,
                  createdAt: Date.now(),
+                 status: "sent",
                  reply: {
                   clientId: replyTo?.clientMessageId,
                   senderId: replyTo?.senderId,
