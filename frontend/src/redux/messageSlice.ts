@@ -101,6 +101,16 @@ const messageSlice = createSlice({
      })
    },
 
+    setDeliverd(state , action) {
+    const messages = state.byConversationId[action.payload];
+     if (!messages) return;
+
+     const lastMessage = messages.at(-1);
+     if(lastMessage && lastMessage.status === "sent") {
+      lastMessage.status = "deliverd"
+     }
+   },
+
     resetMessages() {
       return initialState;
     },
@@ -109,7 +119,7 @@ const messageSlice = createSlice({
 
 export const { 
   addMessage, setMessages, resetMessages , markMessagesRead ,
-  removeMessage , updateMessage
+  removeMessage , updateMessage , setDeliverd
 } =
   messageSlice.actions;
 
