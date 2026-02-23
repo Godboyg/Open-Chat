@@ -1086,12 +1086,12 @@ function Page() {
 
                            if (!res?.image) return null;
                       return (
-                        <div className="p-2 bg-g flex items-center hover:bg-gray-900 justify-between rounded-xl w-full">
+                        <div className="p-2 flex items-center hover:bg-gray-900 justify-between rounded-xl w-full">
                           <div className="flex items-center gap-2">
                             {large && (
                             <div
                               onClick={() => setLarge(false)}
-                              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity duration-300"
+                              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-300"
                             >
                               <div
                                 className="transform transition-all duration-300 scale-100"
