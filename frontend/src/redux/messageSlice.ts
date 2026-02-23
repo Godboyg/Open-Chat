@@ -24,7 +24,7 @@ export interface Message {
   // name: string;
   time?: Date;
   createdAt?: Date | number | string;
-  status?: "sent" | "read";
+  status?: "sent" | "deliverd" | "read";
   deliveryStatus?: DeliveryStatus;
   receiversId? : string[];
 }
