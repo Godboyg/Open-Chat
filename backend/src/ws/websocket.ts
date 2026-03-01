@@ -623,7 +623,7 @@ wss.on('connection', (ws: ExtWebSocket , request: IncomingMessage) => {
                       type: "MESSAGE",
                       from: data.name
                     },
-                    url: `/chat/${id}`,
+                    url: "/General",
                   })
                 }
                 }
