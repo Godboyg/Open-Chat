@@ -1,1 +1,15 @@
 
+# name: Ping Render Server
+
+# on:
+#   schedule:
+#     - cron: "*/30 * * * *"
+#   workflow_dispatch:
+
+# jobs:
+#   ping:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Ping Backend
+#         run: curl https://open-chat-v9i4.onrender.com
